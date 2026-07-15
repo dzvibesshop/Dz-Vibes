@@ -4,10 +4,11 @@
    ⚠️  ONE-TIME SETUP — Run this SQL in your Supabase SQL Editor:
    
    CREATE TABLE IF NOT EXISTS promo_codes (
-     id          TEXT PRIMARY KEY,
-     code        TEXT NOT NULL UNIQUE,
-     discount_value NUMERIC NOT NULL CHECK (discount_value > 0 AND discount_value <= 100),
-     created_at  TIMESTAMPTZ DEFAULT NOW()
+     id                TEXT PRIMARY KEY,
+     code              TEXT NOT NULL UNIQUE,
+     discount_percent  NUMERIC NOT NULL CHECK (discount_percent > 0 AND discount_percent <= 100),
+     is_active         BOOLEAN DEFAULT TRUE,
+     created_at        TIMESTAMPTZ DEFAULT NOW()
    );
    
    -- Allow anyone (including anonymous visitors) to READ promo codes:
@@ -189,12 +190,18 @@ function mapProductToDbRow(p) {
    • deletePromoCodeFromDb() → deletes a promo code from Supabase
                                (called only from admin panel)
    • generateId()            → creates a unique ID for new codes
+   
+   ⚠️ IMPORTANT COLUMN MAPPING (matches current DB schema):
+      DB column `code`              → app field `code`
+      DB column `discount_percent`  → app field `discountValue`  (internal name kept
+                                       for compatibility with the rendering engine)
+      DB column `is_active`         → app field `isActive`
    ══════════════════════════════════════════════════════════════════════════ */
 
 /**
  * Fetch ALL promo codes from Supabase.
  * Uses the anon key so ANY visitor (no login required) can validate codes.
- * Returns an array of { id, code, discountValue } objects.
+ * Returns an array of { id, code, discountValue, isActive } objects.
  */
 async function fetchPromoCodes() {
   const { data, error } = await supabaseClient
@@ -207,11 +214,14 @@ async function fetchPromoCodes() {
     return [];
   }
 
-  /* Map DB column names → app-friendly shape */
+  /* Map DB column names → app-friendly shape.
+     ✅ FIX: read from `discount_percent` (the real column), not the old
+     `discount_value` name — that mismatch was causing the "-0%" bug. */
   return (data || []).map(row => ({
     id:            row.id,
     code:          row.code,
-    discountValue: parseFloat(row.discount_value) || 0
+    discountValue: parseFloat(row.discount_percent) || 0,
+    isActive:      row.is_active !== false
   }));
 }
 
@@ -221,15 +231,12 @@ async function fetchPromoCodes() {
  * here because the admin panel is already behind the password gate.
  * Returns true on success, false on failure.
  */
-/**
- * Insert a new promo code into Supabase.
- */
 async function savePromoCodeToDb(code, discountValue) {
   const { error } = await supabaseClient
     .from('promo_codes')
     .insert([{
       code:             code.toUpperCase().trim(),
-      discount_percent: parseFloat(discountValue), // تأكد أن الاسم هنا discount_percent وليس discount_value
+      discount_percent: parseFloat(discountValue),
       is_active:        true
     }]);
 
@@ -751,7 +758,8 @@ const appliedPromosPerCard = {};
 
 /**
  * Called when a customer clicks "تطبيق" (Apply) on a product card.
- * Fetches ALL promo codes from Supabase and checks if the entered code exists.
+ * Fetches ALL promo codes from Supabase and checks if the entered code exists,
+ * is active (is_active = true), and applies its discount_percent value.
  * This works for ANY visitor — no login required.
  */
 async function handleApplyPromo(card, productId) {
@@ -778,7 +786,7 @@ async function handleApplyPromo(card, productId) {
 
   const match = promos.find(p => p.code.toUpperCase() === code);
 
-  if (!match) {
+  if (!match || !match.isActive || !(match.discountValue > 0)) {
     showPromoMsg(msgEl, 'كود غير صالح / Invalid code', false);
     delete appliedPromosPerCard[productId];
     updateCardPriceDisplay(card, productId);
@@ -1190,8 +1198,9 @@ const promoValueInput = document.getElementById('promoValue');
 const promoList       = document.getElementById('promoList');
 
 /**
- * Admin submits new promo code → saved to Supabase promo_codes table.
- * All visitors will immediately be able to validate this code.
+ * Admin submits new promo code → saved to Supabase promo_codes table
+ * using the `discount_percent` column. All visitors will immediately
+ * be able to validate this code.
  */
 promoForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -1218,7 +1227,7 @@ promoForm.addEventListener('submit', async (e) => {
     return;
   }
 
-  /* Save to Supabase */
+  /* Save to Supabase (writes into discount_percent column) */
   const success = await savePromoCodeToDb(code, value);
 
   submitPromoBtn.disabled    = false;
@@ -1245,7 +1254,8 @@ async function deletePromoCode(id) {
 
 /**
  * Renders the promo code list in the admin panel.
- * Fetches live data from Supabase each time.
+ * Fetches live data from Supabase each time and correctly displays
+ * the `discount_percent` value (mapped internally to `discountValue`).
  */
 async function renderAdminPromoList() {
   promoList.innerHTML = `<p class="muted-text">⏳ جارٍ التحميل...</p>`;
@@ -1262,6 +1272,7 @@ async function renderAdminPromoList() {
       <div>
         <span class="promo-code">${escapeHtml(promo.code)}</span>
         <span class="promo-value">-${promo.discountValue}%</span>
+        ${!promo.isActive ? `<span class="promo-inactive-tag" style="color:#ff6b6b;font-size:12px;margin-left:6px;">(inactive)</span>` : ''}
       </div>
       <button class="btn btn-sm btn-danger"
               onclick="deletePromoCode('${escapeHtml(promo.id)}')">Delete</button>
