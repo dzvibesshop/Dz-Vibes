@@ -221,14 +221,16 @@ async function fetchPromoCodes() {
  * here because the admin panel is already behind the password gate.
  * Returns true on success, false on failure.
  */
+/**
+ * Insert a new promo code into Supabase.
+ */
 async function savePromoCodeToDb(code, discountValue) {
-  const id = generateId();
   const { error } = await supabaseClient
     .from('promo_codes')
     .insert([{
-      id,
-      code:           code.toUpperCase(),
-      discount_value: discountValue
+      code:             code.toUpperCase().trim(),
+      discount_percent: parseFloat(discountValue), // تأكد أن الاسم هنا discount_percent وليس discount_value
+      is_active:        true
     }]);
 
   if (error) {
