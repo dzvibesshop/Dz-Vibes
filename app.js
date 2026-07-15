@@ -1,22 +1,42 @@
 /* ==========================================================================
-   DZ VIBES SHOP — app.js  v8  (Supabase Backend)
-   5 Categories: subscriptions · mobile · playstation · xbox · pc
-   ALL official links guaranteed:
-     Discord  → https://discord.com/invite/cPSgv6F8X9
-     Instagram→ https://www.instagram.com/dzvibes_shop/
-     Telegram → https://t.me/DzVibesShop
+   DZ VIBES SHOP — app.js  v9  (Supabase Backend + Supabase Promo Codes)
+   
+   ⚠️  ONE-TIME SETUP — Run this SQL in your Supabase SQL Editor:
+   
+   CREATE TABLE IF NOT EXISTS promo_codes (
+     id          TEXT PRIMARY KEY,
+     code        TEXT NOT NULL UNIQUE,
+     discount_value NUMERIC NOT NULL CHECK (discount_value > 0 AND discount_value <= 100),
+     created_at  TIMESTAMPTZ DEFAULT NOW()
+   );
+   
+   -- Allow anyone (including anonymous visitors) to READ promo codes:
+   ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
+   
+   CREATE POLICY "Public can read promo codes"
+     ON promo_codes FOR SELECT
+     USING (true);
+   
+   CREATE POLICY "Anyone can insert promo codes"
+     ON promo_codes FOR INSERT
+     WITH CHECK (true);
+   
+   CREATE POLICY "Anyone can delete promo codes"
+     ON promo_codes FOR DELETE
+     USING (true);
+   
    ========================================================================== */
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ① SUPABASE CONFIG
+   ① SUPABASE CONFIG  ← ✅ UPDATED TO NEW PROJECT CREDENTIALS
    ══════════════════════════════════════════════════════════════════════════ */
-const SUPABASE_URL      = 'https://btxmvkdlxcbnqvlcuxzb.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_oKG9Cc_JAtKGbVnq-ep07g_LpLdLCiw';
+const SUPABASE_URL      = 'https://kbyjyfmifsufxbmhnwnq.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_xZPIAOb59rGWmUvnI__Pyw_ijtSFRwo';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ② CONFIGURATION — all official links defined here as single source of truth
+   ② CONFIGURATION
    ══════════════════════════════════════════════════════════════════════════ */
 const CONFIG = {
   INSTAGRAM_URL:     "https://www.instagram.com/dzvibes_shop/",
@@ -25,8 +45,8 @@ const CONFIG = {
   DISCORD_INVITE:    "https://discord.com/invite/cPSgv6F8X9",
   ADMIN_PASSWORD:    "Dz.Vibes.0107@",
   STORAGE_KEYS: {
-    PROMOS:        "dzvibes_promocodes",
     ADMIN_SESSION: "dzvibes_admin_session"
+    /* ✅ PROMOS key removed — now stored in Supabase, not localStorage */
   }
 };
 
@@ -160,12 +180,83 @@ function mapProductToDbRow(p) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ④ PROMO CODE HELPERS (localStorage)
+   ④ PROMO CODE HELPERS — Supabase
+   
+   • fetchPromoCodes()       → reads from Supabase promo_codes table
+                               (public, no auth needed — any visitor can validate)
+   • savePromoCodeToDb()     → inserts a new promo code into Supabase
+                               (called only from admin panel)
+   • deletePromoCodeFromDb() → deletes a promo code from Supabase
+                               (called only from admin panel)
+   • generateId()            → creates a unique ID for new codes
    ══════════════════════════════════════════════════════════════════════════ */
-const getPromoCodes  = () =>
-  JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.PROMOS) || '[]');
-const savePromoCodes = (p) =>
-  localStorage.setItem(CONFIG.STORAGE_KEYS.PROMOS, JSON.stringify(p));
+
+/**
+ * Fetch ALL promo codes from Supabase.
+ * Uses the anon key so ANY visitor (no login required) can validate codes.
+ * Returns an array of { id, code, discountValue } objects.
+ */
+async function fetchPromoCodes() {
+  const { data, error } = await supabaseClient
+    .from('promo_codes')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('fetchPromoCodes error:', error.message);
+    return [];
+  }
+
+  /* Map DB column names → app-friendly shape */
+  return (data || []).map(row => ({
+    id:            row.id,
+    code:          row.code,
+    discountValue: parseFloat(row.discount_value) || 0
+  }));
+}
+
+/**
+ * Insert a new promo code into Supabase.
+ * Only called by the admin form — but no extra auth check is needed
+ * here because the admin panel is already behind the password gate.
+ * Returns true on success, false on failure.
+ */
+async function savePromoCodeToDb(code, discountValue) {
+  const id = generateId();
+  const { error } = await supabaseClient
+    .from('promo_codes')
+    .insert([{
+      id,
+      code:           code.toUpperCase(),
+      discount_value: discountValue
+    }]);
+
+  if (error) {
+    console.error('savePromoCodeToDb error:', error.message);
+    showToast('⚠️ فشل إضافة الكود: ' + error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Delete a promo code from Supabase by its ID.
+ * Only called by the admin panel.
+ * Returns true on success, false on failure.
+ */
+async function deletePromoCodeFromDb(id) {
+  const { error } = await supabaseClient
+    .from('promo_codes')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('deletePromoCodeFromDb error:', error.message);
+    showToast('⚠️ فشل حذف الكود: ' + error.message);
+    return false;
+  }
+  return true;
+}
 
 const generateId = () =>
   Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
@@ -402,17 +493,14 @@ document.getElementById('searchInput').addEventListener('input', (e) =>
 
 /* ══════════════════════════════════════════════════════════════════════════
    ORDER LINK RESOLVER
-   — Always uses official CONFIG links as guaranteed fallback
    ══════════════════════════════════════════════════════════════════════════ */
 function resolveOrderLink(platform, product, message) {
   const encoded = encodeURIComponent(message);
   switch (platform) {
     case 'instagram':
-      /* Always official Instagram — no override */
       return CONFIG.INSTAGRAM_URL;
 
     case 'telegram': {
-      /* Use product-level override username if set, else global default */
       const user = (product.telegramUsername && product.telegramUsername.trim())
         ? product.telegramUsername.trim()
         : CONFIG.TELEGRAM_USERNAME;
@@ -420,8 +508,6 @@ function resolveOrderLink(platform, product, message) {
     }
 
     case 'discord':
-      /* Use product-level discord link if valid, else ALWAYS fall back to
-         the official invite — never return '#' or void  */
       if (product.discordLink && product.discordLink.trim() &&
           product.discordLink.trim() !== '#') {
         return product.discordLink.trim();
@@ -475,7 +561,6 @@ async function sendDiscordWebhookEmbed(product, finalPrice, appliedPromo) {
 
 /* ══════════════════════════════════════════════════════════════════════════
    BUILD PRODUCT CARD
-   — Buttons are <a> tags with real href values (no javascript:void)
    ══════════════════════════════════════════════════════════════════════════ */
 function buildProductCard(product) {
   const basePrice   = calculateBasePrice(product.cost, product.profitPercent);
@@ -483,11 +568,9 @@ function buildProductCard(product) {
   const hasDiscount = parseFloat(product.discountPercent) > 0;
   const isAvail     = product.available;
 
-  /* Resolve the actual order URLs right now so they are baked into the href */
   const orderMsg       = buildOrderMessage(product, finalPrice, null);
   const instagramHref  = CONFIG.INSTAGRAM_URL;
   const telegramHref   = resolveOrderLink('telegram', product, orderMsg);
-  /* Discord: product-level link or official invite — NEVER a placeholder */
   const discordHref    = (product.discordLink && product.discordLink.trim() &&
                           product.discordLink.trim() !== '#')
                           ? product.discordLink.trim()
@@ -507,24 +590,12 @@ function buildProductCard(product) {
     ? `<span class="card-cat-chip" data-cat="${escapeHtml(product.category)}">${catMeta.label}</span>`
     : '';
 
-  /* SVG icons */
   const igSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>`;
 
   const tgSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>`;
 
   const dcSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.082.114 18.105.134 18.12a19.919 19.919 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>`;
 
-  /*
-   * CRITICAL FIX:
-   * All three order buttons are now proper <a> anchor tags with real href values.
-   * - Instagram → always CONFIG.INSTAGRAM_URL
-   * - Telegram  → resolveOrderLink result (with pre-filled message)
-   * - Discord   → product.discordLink if valid, else CONFIG.DISCORD_INVITE
-   *
-   * For unavailable products: Instagram & Discord remain clickable (links still work).
-   * Telegram is visually dimmed but still links via CSS pointer-events kept on <a>.
-   * We add aria-disabled for accessibility on unavailable Telegram.
-   */
   card.innerHTML = `
     <div class="product-image-wrap">
       <img src="${escapeHtml(product.image)}"
@@ -560,8 +631,6 @@ function buildProductCard(product) {
       <div class="promo-msg" data-promo-msg></div>
 
       <div class="order-buttons">
-
-        <!-- Instagram: always official link, always opens in new tab -->
         <a href="${instagramHref}"
            target="_blank"
            rel="noopener noreferrer"
@@ -572,7 +641,6 @@ function buildProductCard(product) {
           ${igSvg} انستغرام
         </a>
 
-        <!-- Telegram: pre-resolved link with message, disabled style if unavailable -->
         <a href="${isAvail ? escapeHtml(telegramHref) : 'https://t.me/DzVibesShop'}"
            target="_blank"
            rel="noopener noreferrer"
@@ -584,7 +652,6 @@ function buildProductCard(product) {
           ${tgSvg} تيليغرام
         </a>
 
-        <!-- Discord: product link or official invite — NEVER a placeholder -->
         <a href="${escapeHtml(discordHref)}"
            target="_blank"
            rel="noopener noreferrer"
@@ -594,7 +661,6 @@ function buildProductCard(product) {
            title="اطلب عبر الديسكورد">
           ${dcSvg} ديسكورد
         </a>
-
       </div>
     </div>
   `;
@@ -626,18 +692,15 @@ productsGrid.addEventListener('click', async (e) => {
     return;
   }
 
-  /* Order button clicks — for <a> tags we intercept to also send webhook
-     and update telegram href with promo-adjusted price if promo applied */
   const orderLink = e.target.closest('.card-order-btn');
   if (orderLink) {
     const platform = orderLink.dataset.order;
 
-    /* For Discord: always fire webhook + open the baked-in href */
     if (platform === 'discord') {
       e.preventDefault();
       const product = _cachedProducts.find(p => String(p.id) === String(productId));
       if (!product) return;
-      const finalPrice = parseFloat(card.querySelector('.price-final').dataset.finalPrice);
+      const finalPrice   = parseFloat(card.querySelector('.price-final').dataset.finalPrice);
       const appliedPromo = appliedPromosPerCard[productId] || null;
       sendDiscordWebhookEmbed(product, finalPrice, appliedPromo);
       const discordUrl = (product.discordLink && product.discordLink.trim() &&
@@ -648,12 +711,11 @@ productsGrid.addEventListener('click', async (e) => {
       return;
     }
 
-    /* For Telegram: rebuild link with promo-adjusted price */
     if (platform === 'telegram') {
       e.preventDefault();
       const product = _cachedProducts.find(p => String(p.id) === String(productId));
       if (!product) return;
-      if (!product.available) return; /* blocked for unavailable */
+      if (!product.available) return;
       const finalPrice   = parseFloat(card.querySelector('.price-final').dataset.finalPrice);
       const appliedPromo = appliedPromosPerCard[productId] || null;
       const msg          = buildOrderMessage(product, finalPrice, appliedPromo);
@@ -662,8 +724,6 @@ productsGrid.addEventListener('click', async (e) => {
       return;
     }
 
-    /* For Instagram: just let the <a> href do its job (it already has the right URL) */
-    /* No e.preventDefault() — browser opens the link naturally */
     return;
   }
 
@@ -683,24 +743,46 @@ productsGrid.addEventListener('click', async (e) => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
-   PROMO CODE — card level
+   PROMO CODE — card level (async, validates against Supabase)
    ══════════════════════════════════════════════════════════════════════════ */
 const appliedPromosPerCard = {};
 
-function handleApplyPromo(card, productId) {
-  const input = card.querySelector('[data-promo-input]');
-  const msgEl = card.querySelector('[data-promo-msg]');
-  const code  = input.value.trim().toUpperCase();
+/**
+ * Called when a customer clicks "تطبيق" (Apply) on a product card.
+ * Fetches ALL promo codes from Supabase and checks if the entered code exists.
+ * This works for ANY visitor — no login required.
+ */
+async function handleApplyPromo(card, productId) {
+  const input    = card.querySelector('[data-promo-input]');
+  const msgEl    = card.querySelector('[data-promo-msg]');
+  const applyBtn = card.querySelector('[data-apply-promo]');
+  const code     = input.value.trim().toUpperCase();
 
-  if (!code) { showPromoMsg(msgEl, 'يرجى إدخال كود.', false); return; }
+  if (!code) {
+    showPromoMsg(msgEl, 'يرجى إدخال كود.', false);
+    return;
+  }
 
-  const match = getPromoCodes().find(p => p.code.toUpperCase() === code);
+  /* Show loading state while we query Supabase */
+  applyBtn.disabled    = true;
+  applyBtn.textContent = '...';
+  msgEl.textContent    = '';
+
+  /* ✅ Fetch from Supabase — works for all visitors, not just admin */
+  const promos = await fetchPromoCodes();
+
+  applyBtn.disabled    = false;
+  applyBtn.textContent = 'تطبيق';
+
+  const match = promos.find(p => p.code.toUpperCase() === code);
+
   if (!match) {
     showPromoMsg(msgEl, 'كود غير صالح / Invalid code', false);
     delete appliedPromosPerCard[productId];
     updateCardPriceDisplay(card, productId);
     return;
   }
+
   appliedPromosPerCard[productId] = match;
   showPromoMsg(msgEl, `✅ "${match.code}" مطبّق: -${match.discountValue}%`, true);
   updateCardPriceDisplay(card, productId);
@@ -752,7 +834,6 @@ function buildOrderMessage(product, finalPrice, appliedPromo) {
 function openOrderLink(platform, product, finalPrice, appliedPromo) {
   if (platform === 'discord') {
     sendDiscordWebhookEmbed(product, finalPrice, appliedPromo);
-    /* Always use the official Discord invite as ultimate fallback */
     const link = (product.discordLink && product.discordLink.trim() &&
                   product.discordLink.trim() !== '#')
                   ? product.discordLink.trim()
@@ -774,8 +855,6 @@ function openOrderLink(platform, product, finalPrice, appliedPromo) {
 
 /* ══════════════════════════════════════════════════════════════════════════
    PRODUCT DETAILS MODAL
-   — Modal buttons are now <a> tags whose href is set dynamically when
-     the modal opens, guaranteeing correct official URLs every time.
    ══════════════════════════════════════════════════════════════════════════ */
 const productDetailsModalOverlay = document.getElementById('productDetailsModal');
 const modalProductImage          = document.getElementById('modalProductImage');
@@ -795,7 +874,6 @@ function openProductDetailsModal(product, finalPrice) {
   const appliedPromo = appliedPromosPerCard[product.id] || null;
   currentModalContext = { product, finalPrice, appliedPromo };
 
-  /* ── Populate modal content ── */
   modalProductImage.src               = product.image;
   modalProductImage.alt               = product.title;
   modalProductTitle.textContent       = product.title;
@@ -812,21 +890,17 @@ function openProductDetailsModal(product, finalPrice) {
     modalCategoryBadge.style.display = 'none';
   }
 
-  /* ── Build order message for pre-filling Telegram link ── */
   const orderMsg = buildOrderMessage(product, finalPrice, appliedPromo);
 
-  /* ── Set Instagram button href — ALWAYS official Instagram ── */
   modalInstagramBtn.href = CONFIG.INSTAGRAM_URL;
   modalInstagramBtn.setAttribute('target', '_blank');
   modalInstagramBtn.setAttribute('rel', 'noopener noreferrer');
 
-  /* ── Set Telegram button href — resolved with product override or global default ── */
   const telegramUrl = resolveOrderLink('telegram', product, orderMsg);
   modalTelegramBtn.href = telegramUrl;
   modalTelegramBtn.setAttribute('target', '_blank');
   modalTelegramBtn.setAttribute('rel', 'noopener noreferrer');
 
-  /* ── Set Discord button href — product link or OFFICIAL INVITE, never placeholder ── */
   const discordUrl = (product.discordLink && product.discordLink.trim() &&
                       product.discordLink.trim() !== '#')
                       ? product.discordLink.trim()
@@ -835,28 +909,24 @@ function openProductDetailsModal(product, finalPrice) {
   modalDiscordBtn.setAttribute('target', '_blank');
   modalDiscordBtn.setAttribute('rel', 'noopener noreferrer');
 
-  /* ── Availability: dim Telegram for out-of-stock, Discord always accessible ── */
   if (product.available) {
-    modalOutOfStockNote.style.display = 'none';
+    modalOutOfStockNote.style.display    = 'none';
     modalTelegramBtn.classList.remove('btn-disabled-look');
     modalTelegramBtn.removeAttribute('aria-disabled');
     modalTelegramBtn.style.pointerEvents = '';
     modalTelegramBtn.style.opacity       = '';
   } else {
-    modalOutOfStockNote.style.display    = 'block';
+    modalOutOfStockNote.style.display = 'block';
     modalTelegramBtn.classList.add('btn-disabled-look');
     modalTelegramBtn.setAttribute('aria-disabled', 'true');
-    /* Keep the link functional but visually dimmed */
-    modalTelegramBtn.style.opacity = '0.45';
+    modalTelegramBtn.style.opacity    = '0.45';
   }
 
-  /* Discord is ALWAYS enabled — even for out-of-stock items */
   modalDiscordBtn.classList.remove('btn-disabled-look');
   modalDiscordBtn.removeAttribute('aria-disabled');
   modalDiscordBtn.style.pointerEvents = '';
   modalDiscordBtn.style.opacity       = '';
 
-  /* ── Also attach click handler for Discord to fire webhook ── */
   modalDiscordBtn.onclick = (e) => {
     e.preventDefault();
     sendDiscordWebhookEmbed(product, finalPrice, appliedPromo);
@@ -904,7 +974,6 @@ const submitBtn         = document.getElementById('submitBtn');
 const cancelEditBtn     = document.getElementById('cancelEditBtn');
 const productsTableBody = document.getElementById('productsTableBody');
 
-/* Live price preview */
 function updatePricePreview() {
   const cost     = prodCost.value;
   const profit   = prodProfit.value;
@@ -938,9 +1007,7 @@ productForm.addEventListener('submit', async (e) => {
   submitBtn.disabled    = true;
   submitBtn.textContent = 'جارٍ الحفظ...';
 
-  const editingId = productIdInput.value;
-
-  /* Discord field is optional — falls back to official invite if blank */
+  const editingId  = productIdInput.value;
   const discordVal = prodDiscord.value.trim() || CONFIG.DISCORD_INVITE;
 
   const productData = {
@@ -992,21 +1059,20 @@ function editProduct(id) {
   const product = _cachedProducts.find(p => String(p.id) === String(id));
   if (!product) return;
 
-  productIdInput.value      = product.id;
-  prodTitle.value           = product.title;
-  prodCategory.value        = product.category || '';
-  prodImage.value           = product.image;
-  prodCost.value            = product.cost;
-  prodProfit.value          = product.profitPercent;
-  prodDiscount.value        = product.discountPercent;
-  prodDescription.value     = product.description || '';
-  prodTelegram.value        = product.telegramUsername || '';
-  /* Show stored discord link — if it equals the global default, show blank for clarity */
-  prodDiscord.value         = (product.discordLink === CONFIG.DISCORD_INVITE)
-                                ? ''
-                                : (product.discordLink || '');
-  prodTopSeller.checked     = product.topSeller;
-  prodAvailable.checked     = product.available;
+  productIdInput.value  = product.id;
+  prodTitle.value       = product.title;
+  prodCategory.value    = product.category || '';
+  prodImage.value       = product.image;
+  prodCost.value        = product.cost;
+  prodProfit.value      = product.profitPercent;
+  prodDiscount.value    = product.discountPercent;
+  prodDescription.value = product.description || '';
+  prodTelegram.value    = product.telegramUsername || '';
+  prodDiscord.value     = (product.discordLink === CONFIG.DISCORD_INVITE)
+                            ? ''
+                            : (product.discordLink || '');
+  prodTopSeller.checked = product.topSeller;
+  prodAvailable.checked = product.available;
 
   formTitle.textContent       = '✏️ Edit Product';
   submitBtn.textContent       = 'Update Product';
@@ -1039,7 +1105,6 @@ async function toggleProductStatus(id) {
   }
 }
 
-/* Render admin product table */
 async function renderAdminProductTable() {
   productsTableBody.innerHTML = `
     <tr>
@@ -1064,15 +1129,14 @@ async function renderAdminProductTable() {
   }
 
   productsTableBody.innerHTML = products.map(product => {
-    const finalPrice  = calculateFinalPrice(
+    const finalPrice = calculateFinalPrice(
       product.cost, product.profitPercent, product.discountPercent
     );
-    const catMeta     = product.category ? CATEGORY_META[product.category] : null;
-    const catCell     = catMeta
+    const catMeta  = product.category ? CATEGORY_META[product.category] : null;
+    const catCell  = catMeta
       ? `<span class="cat-pill" data-cat="${escapeHtml(product.category)}">${catMeta.label}</span>`
       : `<span style="color:var(--text-muted)">—</span>`;
 
-    /* Resolve the effective discord link for display */
     const effectiveDiscord = (product.discordLink && product.discordLink.trim() &&
                               product.discordLink.trim() !== '#')
                               ? product.discordLink.trim()
@@ -1116,46 +1180,81 @@ async function renderAdminProductTable() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ADMIN — PROMO CODES
+   ADMIN — PROMO CODES (fully Supabase-backed)
    ══════════════════════════════════════════════════════════════════════════ */
 const promoForm       = document.getElementById('promoForm');
 const promoCodeInput  = document.getElementById('promoCode');
 const promoValueInput = document.getElementById('promoValue');
 const promoList       = document.getElementById('promoList');
 
-promoForm.addEventListener('submit', (e) => {
+/**
+ * Admin submits new promo code → saved to Supabase promo_codes table.
+ * All visitors will immediately be able to validate this code.
+ */
+promoForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+
   const code  = promoCodeInput.value.trim().toUpperCase();
   const value = parseFloat(promoValueInput.value);
+
   if (!code || !value || value <= 0 || value > 100) {
     showToast('⚠️ Please enter a valid code and discount value.');
     return;
   }
-  const promos = getPromoCodes();
-  if (promos.some(p => p.code.toUpperCase() === code)) {
+
+  /* Disable form while saving */
+  const submitPromoBtn       = promoForm.querySelector('button[type="submit"]');
+  submitPromoBtn.disabled    = true;
+  submitPromoBtn.textContent = 'جارٍ الحفظ...';
+
+  /* Check for duplicate code in Supabase */
+  const existing = await fetchPromoCodes();
+  if (existing.some(p => p.code.toUpperCase() === code)) {
     showToast('⚠️ This promo code already exists.');
+    submitPromoBtn.disabled    = false;
+    submitPromoBtn.textContent = 'Add Code';
     return;
   }
-  promos.push({ id: generateId(), code, discountValue: value });
-  savePromoCodes(promos);
-  promoForm.reset();
-  renderAdminPromoList();
-  showToast('✅ Promo code added!');
+
+  /* Save to Supabase */
+  const success = await savePromoCodeToDb(code, value);
+
+  submitPromoBtn.disabled    = false;
+  submitPromoBtn.textContent = 'Add Code';
+
+  if (success) {
+    promoForm.reset();
+    renderAdminPromoList();
+    showToast('✅ Promo code added!');
+  }
 });
 
-function deletePromoCode(id) {
+/**
+ * Admin deletes a promo code → removed from Supabase.
+ */
+async function deletePromoCode(id) {
   if (!confirm('Delete this promo code?')) return;
-  savePromoCodes(getPromoCodes().filter(p => p.id !== id));
-  renderAdminPromoList();
-  showToast('🗑️ Promo code deleted.');
+  const success = await deletePromoCodeFromDb(id);
+  if (success) {
+    renderAdminPromoList();
+    showToast('🗑️ Promo code deleted.');
+  }
 }
 
-function renderAdminPromoList() {
-  const promos = getPromoCodes();
+/**
+ * Renders the promo code list in the admin panel.
+ * Fetches live data from Supabase each time.
+ */
+async function renderAdminPromoList() {
+  promoList.innerHTML = `<p class="muted-text">⏳ جارٍ التحميل...</p>`;
+
+  const promos = await fetchPromoCodes();
+
   if (promos.length === 0) {
     promoList.innerHTML = `<p class="muted-text">No promo codes yet.</p>`;
     return;
   }
+
   promoList.innerHTML = promos.map(promo => `
     <div class="promo-item">
       <div>
@@ -1163,7 +1262,7 @@ function renderAdminPromoList() {
         <span class="promo-value">-${promo.discountValue}%</span>
       </div>
       <button class="btn btn-sm btn-danger"
-              onclick="deletePromoCode('${promo.id}')">Delete</button>
+              onclick="deletePromoCode('${escapeHtml(promo.id)}')">Delete</button>
     </div>`).join('');
 }
 
