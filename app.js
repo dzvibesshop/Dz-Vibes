@@ -1,7 +1,8 @@
 /* ==========================================================================
-   DZ VIBES SHOP — app.js  v13  (Supabase Backend + Promo Codes + Variations
+   DZ VIBES SHOP — app.js  v14  (Supabase Backend + Promo Codes + Variations
                                   + Full Sub-Category Filtering System
-                                  + Variation Picker Popup Modal)
+                                  + Variation Picker Popup Modal
+                                  + Edit Product Popup Modal)
    ========================================================================== */
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -774,7 +775,1092 @@ function injectVariationModalStyles() {
 injectVariationModalStyles();
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ②.8 BUILD & INJECT THE VARIATION PICKER MODAL INTO THE DOM
+   ②.8 DYNAMIC STYLES — Edit Product Modal
+   ══════════════════════════════════════════════════════════════════════════ */
+function injectEditModalStyles() {
+  if (document.getElementById('dzvibes-editmodal-style')) return;
+  const style = document.createElement('style');
+  style.id = 'dzvibes-editmodal-style';
+  style.textContent = `
+    /* ── Edit Modal Overlay ── */
+    #editProductModalOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    #editProductModalOverlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ── Edit Modal Box ── */
+    #editProductModal {
+      background: #111111;
+      border: 1px solid #2a2a2a;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 760px;
+      max-height: 92vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: #ff1a1a #1a1a1a;
+      box-shadow: 0 28px 90px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,26,26,0.07);
+      transform: translateY(32px) scale(0.97);
+      transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+      opacity: 0;
+      position: relative;
+      direction: ltr;
+      /* Fix: guarantee this element and its children are always clickable
+         once shown — protects against any inherited pointer-events issues */
+      pointer-events: auto;
+    }
+    #editProductModalOverlay.show #editProductModal {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    #editProductModal::-webkit-scrollbar {
+      width: 5px;
+    }
+    #editProductModal::-webkit-scrollbar-track {
+      background: #1a1a1a;
+      border-radius: 10px;
+    }
+    #editProductModal::-webkit-scrollbar-thumb {
+      background: #ff1a1a;
+      border-radius: 10px;
+    }
+
+    /* ── Edit Modal Header ── */
+    .edit-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 18px;
+      border-bottom: 1px solid #1e1e1e;
+      position: sticky;
+      top: 0;
+      background: #111111;
+      z-index: 2;
+    }
+    .edit-modal-header-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .edit-modal-header-title span {
+      font-size: 22px;
+    }
+    #editModalCloseBtn {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      color: #aaa;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+    #editModalCloseBtn:hover {
+      background: #ff1a1a;
+      color: #fff;
+      border-color: #ff1a1a;
+    }
+
+    /* ── Edit Modal Body ── */
+    .edit-modal-body {
+      padding: 24px;
+    }
+
+    /* ── Edit Modal Form Grid ── */
+    .edit-modal-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px 20px;
+    }
+    @media (max-width: 580px) {
+      .edit-modal-form {
+        grid-template-columns: 1fr;
+      }
+    }
+    .edit-modal-form .full-width {
+      grid-column: 1 / -1;
+    }
+
+    /* ── Edit Modal Field Group ── */
+    .edit-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .edit-field-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .edit-field-group input,
+    .edit-field-group select,
+    .edit-field-group textarea {
+      background: #161616;
+      border: 1.5px solid #2a2a2a;
+      color: #fff;
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .edit-field-group input:focus,
+    .edit-field-group select:focus,
+    .edit-field-group textarea:focus {
+      border-color: #ff1a1a;
+      box-shadow: 0 0 0 3px rgba(255, 26, 26, 0.12);
+    }
+    .edit-field-group select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    .edit-field-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .edit-field-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #ff1a1a;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    /* ── Checkbox row ── */
+    .edit-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #161616;
+      border: 1.5px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 11px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .edit-checkbox-row:hover {
+      border-color: #ff1a1a;
+    }
+    .edit-checkbox-row label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ccc;
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: 0;
+      margin: 0;
+    }
+
+    /* ── Edit price preview ── */
+    .edit-price-preview {
+      background: #161616;
+      border: 1.5px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #aaa;
+      font-family: inherit;
+      line-height: 1.7;
+    }
+    .edit-price-preview strong {
+      color: #ff6b6b;
+      font-size: 15px;
+    }
+
+    /* ── Edit Variations Section ── */
+    .edit-variations-section {
+      margin-top: 4px;
+      padding-top: 18px;
+      border-top: 1px dashed #2a2a2a;
+    }
+    .edit-variations-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 14px;
+      display: block;
+    }
+    .edit-variations-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .edit-variation-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 10px 12px;
+      transition: border-color 0.2s;
+    }
+    .edit-variation-row:hover {
+      border-color: #3a3a3a;
+    }
+    .edit-variation-row input[type="text"],
+    .edit-variation-row input[type="number"] {
+      background: #0f0f0f;
+      border: 1px solid #2a2a2a;
+      color: #fff;
+      border-radius: 7px;
+      padding: 9px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .edit-variation-row input[type="text"]:focus,
+    .edit-variation-row input[type="number"]:focus {
+      border-color: #ff1a1a;
+    }
+    .edit-variation-name-input {
+      flex: 1 1 180px;
+      min-width: 130px;
+    }
+    .edit-variation-price-input {
+      flex: 0 1 120px;
+      min-width: 100px;
+    }
+    .edit-variation-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #ccc;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .edit-variation-toggle input {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #ff1a1a;
+    }
+    .edit-variation-remove-btn {
+      background: #2a1010;
+      border: 1px solid #ff4d4d44;
+      color: #ff6b6b;
+      border-radius: 7px;
+      padding: 7px 11px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .edit-variation-remove-btn:hover {
+      background: #ff4d4d;
+      color: #fff;
+      border-color: #ff4d4d;
+    }
+    .edit-add-variation-btn {
+      background: transparent;
+      border: 1.5px dashed #444;
+      color: #888;
+      border-radius: 9px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: all 0.2s;
+      width: 100%;
+      text-align: center;
+    }
+    .edit-add-variation-btn:hover {
+      border-color: #ff1a1a;
+      color: #ff6b6b;
+      background: rgba(255, 26, 26, 0.05);
+    }
+
+    /* ── Edit Modal Footer ── */
+    .edit-modal-footer {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 18px 24px 22px;
+      border-top: 1px solid #1e1e1e;
+      position: sticky;
+      bottom: 0;
+      background: #111111;
+      z-index: 2;
+    }
+    .edit-modal-save-btn {
+      flex: 1;
+      background: linear-gradient(135deg, #ff1a1a 0%, #cc0000 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.22s ease;
+      box-shadow: 0 4px 18px rgba(255, 26, 26, 0.3);
+    }
+    .edit-modal-save-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(255, 26, 26, 0.45);
+    }
+    .edit-modal-save-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .edit-modal-cancel-btn {
+      background: #1e1e1e;
+      border: 1.5px solid #333;
+      color: #aaa;
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .edit-modal-cancel-btn:hover {
+      background: #2a2a2a;
+      color: #fff;
+      border-color: #444;
+    }
+
+    /* ── Divider label inside form ── */
+    .edit-section-divider {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #444;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 4px 0;
+    }
+    .edit-section-divider::before,
+    .edit-section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #222;
+    }
+  `;
+  document.head.appendChild(style);
+}
+injectEditModalStyles();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ②.9 BUILD & INJECT THE EDIT PRODUCT MODAL INTO THE DOM
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * FIX: previously this function returned early whenever
+ * #editProductModalOverlay already existed in the DOM — BEFORE ever
+ * calling _bindEditModalEvents(). If that element existed for any reason
+ * (duplicate script execution, hot-reload, leftover markup, a second call
+ * racing with the first, etc.) the modal HTML would render/open correctly
+ * but its buttons would never receive click listeners — exactly the
+ * "opens fine but Close/Cancel/Save/+Add are frozen" symptom.
+ *
+ * Fix: separate "does the DOM exist" from "are events bound to it".
+ * Events are now bound via a delegated, once-ever listener (see
+ * _bindEditModalEvents below), so calling this function multiple times,
+ * or the overlay pre-existing, can never skip event binding again.
+ */
+function buildEditProductModalDOM() {
+  let overlay = document.getElementById('editProductModalOverlay');
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'editProductModalOverlay';
+
+    overlay.innerHTML = `
+      <div id="editProductModal" role="dialog" aria-modal="true" aria-labelledby="editModalHeading">
+
+        <!-- Sticky Header -->
+        <div class="edit-modal-header">
+          <div class="edit-modal-header-title">
+            <span>✏️</span>
+            <span id="editModalHeading">Edit Product</span>
+          </div>
+          <button type="button" id="editModalCloseBtn" aria-label="Close edit modal">✕</button>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div class="edit-modal-body">
+          <form id="editProductForm" novalidate autocomplete="off">
+
+            <!-- Hidden ID -->
+            <input type="hidden" id="edit-id">
+
+            <div class="edit-modal-form">
+
+              <!-- Title -->
+              <div class="edit-field-group full-width">
+                <label for="edit-title">📝 Product Title</label>
+                <input type="text" id="edit-title" placeholder="e.g. Netflix Premium 1 Month" required>
+              </div>
+
+              <!-- Category -->
+              <div class="edit-field-group">
+                <label for="edit-category">🗂️ Category</label>
+                <select id="edit-category" required></select>
+              </div>
+
+              <!-- Image URL -->
+              <div class="edit-field-group">
+                <label for="edit-image">🖼️ Image URL</label>
+                <input type="url" id="edit-image" placeholder="https://...">
+              </div>
+
+              <!-- Divider: Pricing -->
+              <div class="edit-section-divider full-width">💰 Pricing</div>
+
+              <!-- Cost -->
+              <div class="edit-field-group">
+                <label for="edit-cost">🏷️ Cost Price (DA)</label>
+                <input type="number" id="edit-cost" placeholder="e.g. 1500" step="0.01" min="0">
+              </div>
+
+              <!-- Selling Price -->
+              <div class="edit-field-group">
+                <label for="edit-sellingPrice">💰 Selling Price (DA)</label>
+                <input type="number" id="edit-sellingPrice" placeholder="e.g. 2800" step="0.01" min="0">
+              </div>
+
+              <!-- Discounted Price -->
+              <div class="edit-field-group">
+                <label for="edit-discountedPrice">💥 Discounted Price (DA) — optional</label>
+                <input type="number" id="edit-discountedPrice" placeholder="e.g. 2200 (leave empty if none)" step="0.01" min="0">
+              </div>
+
+              <!-- Price Preview -->
+              <div class="edit-field-group">
+                <label>📊 Price Preview</label>
+                <div class="edit-price-preview" id="edit-pricePreview">
+                  Final Price: <strong>-- DA</strong>
+                </div>
+              </div>
+
+              <!-- Divider: Details -->
+              <div class="edit-section-divider full-width">📋 Details</div>
+
+              <!-- Description -->
+              <div class="edit-field-group full-width">
+                <label for="edit-description">📄 Description</label>
+                <textarea id="edit-description" placeholder="Optional product description..." rows="3"></textarea>
+              </div>
+
+              <!-- Telegram Username -->
+              <div class="edit-field-group">
+                <label for="edit-telegram">✈️ Telegram Username</label>
+                <input type="text" id="edit-telegram" placeholder="e.g. DzVibesShop">
+              </div>
+
+              <!-- Discord Link -->
+              <div class="edit-field-group">
+                <label for="edit-discord">🎮 Discord Link</label>
+                <input type="url" id="edit-discord" placeholder="https://discord.gg/...">
+              </div>
+
+              <!-- Divider: Flags -->
+              <div class="edit-section-divider full-width">⚙️ Options</div>
+
+              <!-- Top Seller -->
+              <div class="edit-field-group">
+                <label style="margin-bottom:7px;">🔥 Top Seller</label>
+                <div class="edit-checkbox-row">
+                  <input type="checkbox" id="edit-topSeller">
+                  <label for="edit-topSeller">Mark as Hot / Top Seller</label>
+                </div>
+              </div>
+
+              <!-- Available -->
+              <div class="edit-field-group">
+                <label style="margin-bottom:7px;">✅ Availability</label>
+                <div class="edit-checkbox-row">
+                  <input type="checkbox" id="edit-available">
+                  <label for="edit-available">Product is Available</label>
+                </div>
+              </div>
+
+            </div><!-- /.edit-modal-form -->
+
+            <!-- Variations Section -->
+            <div class="edit-variations-section full-width" id="editVariationsSection">
+              <span class="edit-variations-label">📦 Product Variations (الباقات)</span>
+              <div class="edit-variations-list" id="editVariationsList"></div>
+              <button type="button" class="edit-add-variation-btn" id="editAddVariationBtn">
+                + Add Variation
+              </button>
+            </div>
+
+          </form><!-- /#editProductForm -->
+        </div><!-- /.edit-modal-body -->
+
+        <!-- Sticky Footer -->
+        <div class="edit-modal-footer">
+          <button type="button" class="edit-modal-cancel-btn" id="editModalCancelBtn">
+            Cancel
+          </button>
+          <button type="button" class="edit-modal-save-btn" id="editModalSaveBtn">
+            💾 Save Changes
+          </button>
+        </div>
+
+      </div><!-- /#editProductModal -->
+    `;
+
+    document.body.appendChild(overlay);
+
+    /* Populate the category dropdown inside the edit modal */
+    _buildEditModalCategoryDropdown();
+  }
+
+  /* Always ensure events are bound — safe to call repeatedly, see below */
+  _bindEditModalEvents();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ②.10 EDIT MODAL — INTERNAL HELPERS
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Builds the category <select> inside the edit modal (mirrors the main admin dropdown) */
+function _buildEditModalCategoryDropdown() {
+  const editCategoryEl = document.getElementById('edit-category');
+  if (!editCategoryEl) return;
+
+  const groups = [
+    {
+      label: '🔌 اشتراكات رقمية',
+      options: [
+        { value: 'sub_digital_keys', label: 'Digital Key 🔑' },
+        { value: 'sub_netflix',      label: 'Netflix 🎬' },
+        { value: 'sub_spotify',      label: 'Spotify 🎵' },
+        { value: 'sub_shahid',       label: 'Shahid 💜' },
+        { value: 'sub_crunchyroll',  label: 'Crunchyroll 🧡' },
+        { value: 'sub_other',        label: 'Other 🛠️' }
+      ]
+    },
+    {
+      label: '📱 شحن ألعاب الهاتف',
+      options: [
+        { value: 'mobile_digital_keys', label: 'Digital Key 🔑' },
+        { value: 'mobile_uid',          label: 'شحن UID 🆔' },
+        { value: 'mobile_card',         label: 'شحن Card 💳' }
+      ]
+    },
+    {
+      label: '🎮 بلاي ستايشن (PSN)',
+      options: [
+        { value: 'psn_digital_keys', label: 'Digital Key 🔑' },
+        { value: 'psn_games',        label: 'ألعاب 🎮' },
+        { value: 'psn_gift_cards',   label: 'Gift Card 💳' }
+      ]
+    },
+    {
+      label: '💚 إكس بوكس (Xbox)',
+      options: [
+        { value: 'xbox_digital_keys', label: 'Digital Key 🔑' },
+        { value: 'xbox_games',        label: 'ألعاب 🎮' },
+        { value: 'xbox_gift_cards',   label: 'Gift Card 💳' },
+        { value: 'xbox_game_pass',    label: 'Game Pass 💚' }
+      ]
+    },
+    {
+      label: '🖥️ ألعاب وحسابات PC',
+      options: [
+        { value: 'pc_digital_keys',     label: 'Digital Key 🔑' },
+        { value: 'pc_shared_accounts',  label: 'حسابات مشتركة 👥' },
+        { value: 'pc_online_accounts',  label: 'حسابات online 🌐' },
+        { value: 'pc_offline_accounts', label: 'حسابات اوفلاين 🖥️' },
+        { value: 'pc_gift_cards',       label: 'Gift Card 💳' }
+      ]
+    }
+  ];
+
+  let html = '<option value="">— Select Category —</option>';
+  groups.forEach(group => {
+    html += `<optgroup label="${escapeAttr(group.label)}">`;
+    group.options.forEach(opt => {
+      html += `<option value="${escapeAttr(opt.value)}">${escapeHtml(opt.label)}</option>`;
+    });
+    html += `</optgroup>`;
+  });
+
+  editCategoryEl.innerHTML = html;
+}
+
+/** Creates and returns a single variation row element for the edit modal */
+function _createEditVariationRow(variation = {}) {
+  const id  = variation.id || generateId();
+  const row = document.createElement('div');
+  row.className           = 'edit-variation-row';
+  row.dataset.variationId = id;
+  row.innerHTML = `
+    <input type="text"
+           class="edit-variation-name-input"
+           placeholder="Package name (e.g. 100 Coins, 5$)"
+           value="${escapeAttr(variation.name || '')}">
+    <input type="number"
+           class="edit-variation-price-input"
+           placeholder="Price (DA)"
+           step="0.01"
+           min="0"
+           value="${(variation.price !== undefined && variation.price !== null) ? variation.price : ''}">
+    <label class="edit-variation-toggle">
+      <input type="checkbox" class="edit-variation-active"
+             ${variation.is_available !== false ? 'checked' : ''}>
+      <span>Active</span>
+    </label>
+    <button type="button" class="edit-variation-remove-btn" aria-label="Remove variation">✕</button>
+  `;
+  /* NOTE: kept as a direct listener because this row element is freshly
+     created here each time — no timing/pre-existing-DOM issue applies. */
+  row.querySelector('.edit-variation-remove-btn').addEventListener('click', () => {
+    row.remove();
+  });
+  return row;
+}
+
+/** Renders the full list of variation rows inside the edit modal */
+function _renderEditModalVariations(variations = []) {
+  const listEl = document.getElementById('editVariationsList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  variations.forEach(v => listEl.appendChild(_createEditVariationRow(v)));
+}
+
+/** Collects all variation data from the edit modal's variation rows */
+function _collectEditModalVariations() {
+  const rows       = document.querySelectorAll('#editVariationsList .edit-variation-row');
+  const variations = [];
+  rows.forEach(row => {
+    const name        = row.querySelector('.edit-variation-name-input').value.trim();
+    const price       = parseFloat(row.querySelector('.edit-variation-price-input').value) || 0;
+    const isAvailable = row.querySelector('.edit-variation-active').checked;
+    if (name) {
+      variations.push({
+        id:           row.dataset.variationId,
+        name:         name,
+        price:        price,
+        is_available: isAvailable
+      });
+    }
+  });
+  return variations;
+}
+
+/** Updates the live price preview inside the edit modal */
+function _updateEditModalPricePreview() {
+  const costEl            = document.getElementById('edit-cost');
+  const sellingEl         = document.getElementById('edit-sellingPrice');
+  const discountedEl      = document.getElementById('edit-discountedPrice');
+  const previewEl         = document.getElementById('edit-pricePreview');
+
+  if (!costEl || !sellingEl || !previewEl) return;
+
+  const costVal            = parseFloat(costEl.value)       || 0;
+  const sellingPriceVal    = parseFloat(sellingEl.value)    || 0;
+  const discountedPriceVal = parseFloat(discountedEl.value) || 0;
+
+  if (!costVal || !sellingPriceVal) {
+    previewEl.innerHTML = 'Final Price: <strong>-- DA</strong>';
+    return;
+  }
+
+  const profitPercent   = calculateProfitPercent(costVal, sellingPriceVal);
+  const hasDiscount     = discountedPriceVal > 0 && discountedPriceVal < sellingPriceVal;
+  const discountPercent = hasDiscount
+    ? calculateDiscountPercent(sellingPriceVal, discountedPriceVal)
+    : 0;
+
+  const finalPrice = hasDiscount ? discountedPriceVal : sellingPriceVal;
+
+  previewEl.innerHTML = hasDiscount
+    ? `Base: <s>${formatPrice(sellingPriceVal)} DA</s> &nbsp;→&nbsp; Final: <strong>${formatPrice(finalPrice)} DA</strong>
+       <br><span style="color:#6a6a6a;font-size:11px;">Profit: ${profitPercent.toFixed(2)}% &nbsp;|&nbsp; Discount: ${discountPercent.toFixed(2)}%</span>`
+    : `Final Price: <strong>${formatPrice(finalPrice)} DA</strong>
+       <br><span style="color:#6a6a6a;font-size:11px;">Profit: ${profitPercent.toFixed(2)}%</span>`;
+}
+
+/**
+ * FIX: this used to attach direct addEventListener calls to the close/
+ * cancel/save/add-variation buttons, and was only ever invoked from
+ * inside buildEditProductModalDOM()'s "first build" branch. If that
+ * branch was skipped (see fix note above), these listeners were never
+ * attached and the buttons appeared frozen.
+ *
+ * Now: button actions are handled via a single DELEGATED click listener
+ * on `document`, registered exactly once (guarded by
+ * window._dzvibesEditModalDelegated). This means the buttons work
+ * regardless of when/how many times the modal DOM gets built, and even
+ * survive the overlay being removed/recreated in the future.
+ *
+ * Listeners that genuinely need to be tied to the modal's own lifecycle
+ * (Escape key while open, backdrop click, live price-preview inputs)
+ * are still bound directly, but guarded with a `dataset.eventsBound`
+ * flag on the overlay so they're never attached twice.
+ */
+function _bindEditModalEvents() {
+  const overlay = document.getElementById('editProductModalOverlay');
+  if (!overlay) return;
+
+  /* ---- 1. Delegated click handling for the action buttons (bind once, ever) ---- */
+  if (!window._dzvibesEditModalDelegated) {
+    window._dzvibesEditModalDelegated = true;
+
+    document.addEventListener('click', (e) => {
+      const ov = document.getElementById('editProductModalOverlay');
+      if (!ov) return;
+
+      /* Close (✕) */
+      if (e.target.closest('#editModalCloseBtn')) {
+        closeEditModal();
+        return;
+      }
+
+      /* Cancel */
+      if (e.target.closest('#editModalCancelBtn')) {
+        closeEditModal();
+        return;
+      }
+
+      /* Save Changes */
+      if (e.target.closest('#editModalSaveBtn')) {
+        _handleEditModalSave();
+        return;
+      }
+
+      /* + Add Variation */
+      if (e.target.closest('#editAddVariationBtn')) {
+        const listEl = document.getElementById('editVariationsList');
+        if (listEl) listEl.appendChild(_createEditVariationRow());
+        return;
+      }
+
+      /* Backdrop click (click directly on the overlay, not its children) */
+      if (e.target === ov) {
+        closeEditModal();
+        return;
+      }
+    });
+
+    /* Escape key closes the modal whenever it's open */
+    document.addEventListener('keydown', (e) => {
+      const ov = document.getElementById('editProductModalOverlay');
+      if (ov && e.key === 'Escape' && ov.classList.contains('show')) {
+        closeEditModal();
+      }
+    });
+  }
+
+  /* ---- 2. Live price preview inputs — bind once per overlay instance ---- */
+  if (overlay.dataset.eventsBound !== 'true') {
+    ['edit-cost', 'edit-sellingPrice', 'edit-discountedPrice'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', _updateEditModalPricePreview);
+    });
+
+    overlay.dataset.eventsBound = 'true';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ②.11 OPEN EDIT MODAL  ← the main function requested
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * openEditModal(productId)
+ *
+ * Finds the product in the local _cachedProducts array, builds (or reuses)
+ * the edit modal DOM, populates every field with the product's current data,
+ * triggers the live price calculation preview, and reveals the modal.
+ *
+ * @param {string|number} productId — The ID of the product to edit
+ */
+function openEditModal(productId) {
+  /* 1. Locate the product in the local cache */
+  const product = _cachedProducts.find(p => String(p.id) === String(productId));
+  if (!product) {
+    showToast('⚠️ Product not found — please refresh the table.');
+    return;
+  }
+
+  /* 2. Ensure the modal DOM exists AND its events are bound (built once,
+        events always (re)verified — see fix notes above) */
+  buildEditProductModalDOM();
+
+  /* 3. Populate scalar fields */
+  const setVal = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = (value !== null && value !== undefined) ? value : '';
+  };
+
+  setVal('edit-id',          product.id);
+  setVal('edit-title',       product.title);
+  setVal('edit-image',       product.image);
+  setVal('edit-description', product.description || '');
+  setVal('edit-telegram',    product.telegramUsername || '');
+
+  /* Discord: show blank if it's the default invite link */
+  setVal(
+    'edit-discord',
+    (product.discordLink && product.discordLink.trim() !== CONFIG.DISCORD_INVITE)
+      ? product.discordLink
+      : ''
+  );
+
+  /* 4. Populate pricing fields */
+  setVal('edit-cost', product.cost > 0 ? product.cost : '');
+
+  const sellingPrice = calculateBasePrice(product.cost, product.profitPercent);
+  setVal(
+    'edit-sellingPrice',
+    product.cost > 0 ? formatPrice(sellingPrice) : ''
+  );
+
+  if (parseFloat(product.discountPercent) > 0) {
+    const discountedPrice = calculateFinalPrice(
+      product.cost, product.profitPercent, product.discountPercent
+    );
+    setVal('edit-discountedPrice', formatPrice(discountedPrice));
+  } else {
+    setVal('edit-discountedPrice', '');
+  }
+
+  /* 5. Populate category dropdown */
+  const catEl = document.getElementById('edit-category');
+  if (catEl) catEl.value = product.category || '';
+
+  /* 6. Populate checkboxes */
+  const topSellerEl = document.getElementById('edit-topSeller');
+  const availableEl = document.getElementById('edit-available');
+  if (topSellerEl) topSellerEl.checked = product.topSeller  === true;
+  if (availableEl) availableEl.checked = product.available  !== false;
+
+  /* 7. Render variations */
+  _renderEditModalVariations(product.variations || []);
+
+  /* 8. Trigger live price preview immediately so it reflects current data */
+  _updateEditModalPricePreview();
+
+  /* 9. Update the modal heading to show the product name */
+  const headingEl = document.getElementById('editModalHeading');
+  if (headingEl) {
+    headingEl.textContent = `Edit: ${product.title.length > 40
+      ? product.title.substring(0, 40) + '…'
+      : product.title}`;
+  }
+
+  /* 10. Reset save button state (in case a previous save attempt disabled it) */
+  const saveBtn = document.getElementById('editModalSaveBtn');
+  if (saveBtn) {
+    saveBtn.disabled    = false;
+    saveBtn.textContent = '💾 Save Changes';
+  }
+
+  /* 11. Show the overlay */
+  const overlay = document.getElementById('editProductModalOverlay');
+  if (overlay) {
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ②.12 CLOSE EDIT MODAL
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Hides the edit modal and restores body scroll */
+function closeEditModal() {
+  const overlay = document.getElementById('editProductModalOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ②.13 SAVE / UPDATE HANDLER FOR EDIT MODAL
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * _handleEditModalSave()
+ *
+ * Reads all fields from the edit modal form, validates them, calls
+ * updateProduct() to persist the changes to Supabase, syncs the local
+ * _cachedProducts array, closes the modal, and re-renders the admin table —
+ * all without a page refresh.
+ */
+async function _handleEditModalSave() {
+  const saveBtn = document.getElementById('editModalSaveBtn');
+
+  /* ── 1. Read raw values ── */
+  const idVal              = (document.getElementById('edit-id')?.value             || '').trim();
+  const titleVal           = (document.getElementById('edit-title')?.value          || '').trim();
+  const categoryVal        = (document.getElementById('edit-category')?.value       || '').trim();
+  const imageVal           = (document.getElementById('edit-image')?.value          || '').trim();
+  const costVal            = parseFloat(document.getElementById('edit-cost')?.value)            || 0;
+  const sellingPriceVal    = parseFloat(document.getElementById('edit-sellingPrice')?.value)    || 0;
+  const discountedPriceVal = parseFloat(document.getElementById('edit-discountedPrice')?.value) || 0;
+  const descriptionVal     = (document.getElementById('edit-description')?.value    || '').trim();
+  const telegramVal        = (document.getElementById('edit-telegram')?.value       || '').trim();
+  const discordRawVal      = (document.getElementById('edit-discord')?.value        || '').trim();
+  const topSellerVal       = document.getElementById('edit-topSeller')?.checked     ?? false;
+  const availableVal       = document.getElementById('edit-available')?.checked     ?? true;
+  const variationsData     = _collectEditModalVariations();
+  const hasVariationsData  = variationsData.length > 0;
+
+  /* ── 2. Validate ── */
+  if (!idVal) {
+    showToast('⚠️ Internal error: missing product ID.');
+    return;
+  }
+
+  if (!titleVal) {
+    showToast('⚠️ Product title is required.');
+    document.getElementById('edit-title')?.focus();
+    return;
+  }
+
+  if (!categoryVal) {
+    showToast('⚠️ Please select a category.');
+    document.getElementById('edit-category')?.focus();
+    return;
+  }
+
+  if (costVal <= 0 && !hasVariationsData) {
+    showToast('⚠️ Please enter a valid Cost Price.');
+    document.getElementById('edit-cost')?.focus();
+    return;
+  }
+
+  if (sellingPriceVal <= 0 && !hasVariationsData) {
+    showToast('⚠️ Please enter a valid Selling Price.');
+    document.getElementById('edit-sellingPrice')?.focus();
+    return;
+  }
+
+  if (discountedPriceVal > 0 && sellingPriceVal > 0 && discountedPriceVal >= sellingPriceVal) {
+    showToast('⚠️ Discounted Price must be less than Selling Price.');
+    document.getElementById('edit-discountedPrice')?.focus();
+    return;
+  }
+
+  /* ── 3. Compute derived pricing values ── */
+  const profitPercent   = calculateProfitPercent(costVal, sellingPriceVal);
+  const discountPercent = (discountedPriceVal > 0 && sellingPriceVal > 0 && discountedPriceVal < sellingPriceVal)
+    ? calculateDiscountPercent(sellingPriceVal, discountedPriceVal)
+    : 0;
+
+  const discordFinalVal = discordRawVal || CONFIG.DISCORD_INVITE;
+
+  /* ── 4. Build the product data object ── */
+  const updatedProductData = {
+    id:               idVal,
+    title:            titleVal,
+    category:         categoryVal,
+    image:            imageVal,
+    cost:             costVal,
+    profitPercent:    profitPercent,
+    discountPercent:  discountPercent,
+    description:      descriptionVal,
+    telegramUsername: telegramVal,
+    discordLink:      discordFinalVal,
+    topSeller:        topSellerVal,
+    available:        availableVal,
+    variations:       variationsData
+  };
+
+  /* ── 5. Disable the save button and show loading state ── */
+  if (saveBtn) {
+    saveBtn.disabled    = true;
+    saveBtn.textContent = '⏳ Saving...';
+  }
+
+  /* ── 6. Persist to Supabase ── */
+  const success = await updateProduct(updatedProductData);
+
+  /* ── 7. Re-enable save button regardless of outcome ── */
+  if (saveBtn) {
+    saveBtn.disabled    = false;
+    saveBtn.textContent = '💾 Save Changes';
+  }
+
+  if (!success) {
+    /* updateProduct() already called showToast with the error */
+    return;
+  }
+
+  /* ── 8. Sync the local _cachedProducts array so the storefront stays fresh ── */
+  const idx = _cachedProducts.findIndex(p => String(p.id) === String(idVal));
+  if (idx !== -1) {
+    /* Map the updated data back through the same transformer used for DB rows,
+       then re-parse it so _cachedProducts holds the canonical shape */
+    _cachedProducts[idx] = {
+      ..._cachedProducts[idx],
+      ...updatedProductData
+    };
+  }
+
+  /* ── 9. Close the modal ── */
+  closeEditModal();
+
+  /* ── 10. Show success toast ── */
+  showToast('✅ Product updated successfully!');
+
+  /* ── 11. Re-render the admin control table without a page refresh ── */
+  await renderAdminProductTable();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ②.14 BUILD & INJECT THE VARIATION PICKER MODAL INTO THE DOM
    ══════════════════════════════════════════════════════════════════════════ */
 function buildVariationPickerModalDOM() {
   if (document.getElementById('variationPickerOverlay')) return;
@@ -2662,6 +3748,10 @@ async function toggleProductStatus(id) {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   ADMIN — RENDER PRODUCT CONTROL TABLE
+   (Updated to include the ➡️ "Quick Edit" button that calls openEditModal)
+   ══════════════════════════════════════════════════════════════════════════ */
 async function renderAdminProductTable() {
   productsTableBody.innerHTML = `
     <tr>
@@ -2730,16 +3820,177 @@ async function renderAdminProductTable() {
         <td>${product.topSeller ? '🔥 Yes' : '—'}</td>
         <td>
           <div class="table-actions">
+            <button class="btn btn-sm btn-quick-edit"
+                    title="Quick Edit — opens popup modal"
+                    onclick="openEditModal('${escapeAttr(String(product.id))}')">➡️ Quick Edit</button>
             <button class="btn btn-sm btn-edit"
-                    onclick="editProduct('${product.id}')">Edit</button>
+                    onclick="editProduct('${escapeAttr(String(product.id))}')">Edit</button>
             <button class="btn btn-sm btn-toggle"
-                    onclick="toggleProductStatus('${product.id}')">Toggle</button>
+                    onclick="toggleProductStatus('${escapeAttr(String(product.id))}')">Toggle</button>
             <button class="btn btn-sm btn-danger"
-                    onclick="deleteProduct('${product.id}')">Delete</button>
+                    onclick="deleteProduct('${escapeAttr(String(product.id))}')">Delete</button>
           </div>
         </td>
       </tr>`;
   }).join('');
+}
+
+/* ── Inject a quick style for the new Quick Edit button ── */
+(function injectQuickEditBtnStyle() {
+  if (document.getElementById('dzvibes-quickedit-style')) return;
+  const style = document.createElement('style');
+  style.id = 'dzvibes-quickedit-style';
+  style.textContent = `
+    .btn-quick-edit {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 1.5px solid #4a4a8a;
+      color: #a0a0ff;
+      border-radius: 7px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .btn-quick-edit:hover {
+      background: linear-gradient(135deg, #2a2a5e 0%, #1e2a5e 100%);
+      border-color: #7070ff;
+      color: #c0c0ff;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 12px rgba(100, 100, 255, 0.25);
+    }
+    .btn-quick-edit:active {
+      transform: translateY(0);
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ADMIN — GLOBAL DISCORD BULK CONTROLLER
+   Lets the admin push one Discord link to EVERY product in the `products`
+   table in a single action, or wipe every product's Discord link back to
+   empty (falling back to CONFIG.DISCORD_INVITE on the storefront, exactly
+   like a per-product blank field already does — see renderAdminProductTable
+   and the storefront rendering logic).
+
+   IMPORTANT: discordLink is NOT its own DB column — it's packed into the
+   `description` column as a `__meta__{...}` JSON prefix (see
+   mapDbRowToProduct / mapProductToDbRow above). That means a single raw
+   SQL-style "UPDATE products SET discord = x" isn't possible: each row's
+   description also carries that product's own real description text, price
+   metadata, telegram override, etc. So the bulk operation instead:
+     1. Takes the already-loaded _cachedProducts (or fetches fresh if empty)
+     2. Rebuilds every row's full DB payload via mapProductToDbRow(), with
+        only discordLink swapped to the new value — every other field
+        (title, price, cost, category, variations, telegram...) is preserved
+        exactly as-is
+     3. Sends all rows in ONE upsert() call, keyed by id, so it's still a
+        single round-trip bulk query even though a single-column bulk UPDATE
+        wasn't possible under the hood.
+   ══════════════════════════════════════════════════════════════════════════ */
+const globalDiscordInput    = document.getElementById('global-discord-input');
+const btnApplyGlobalDiscord = document.getElementById('btn-apply-global-discord');
+const btnClearGlobalDiscord = document.getElementById('btn-clear-global-discord');
+
+/**
+ * Rebuilds and bulk-upserts every product row with a new discordLink value.
+ * @param {string} newDiscordValue — new link, or '' to clear
+ * @returns {Promise<boolean>} success
+ */
+async function _bulkSetDiscordForAllProducts(newDiscordValue) {
+  const products = (_cachedProducts && _cachedProducts.length > 0)
+    ? _cachedProducts
+    : await fetchProducts();
+
+  if (!products || products.length === 0) {
+    showToast('⚠️ لا توجد منتجات لتحديثها.');
+    return false;
+  }
+
+  const rows = products.map(p => ({
+    id: p.id,
+    ...mapProductToDbRow({ ...p, discordLink: newDiscordValue })
+  }));
+
+  const { error } = await supabaseClient
+    .from('products')
+    .upsert(rows, { onConflict: 'id' });
+
+  if (error) {
+    console.error('_bulkSetDiscordForAllProducts error:', error.message);
+    showToast('⚠️ فشل تحديث روابط الديسكورد: ' + error.message);
+    return false;
+  }
+
+  return true;
+}
+
+/** Toggles the loading/disabled state of both global-discord buttons + input */
+function _setGlobalDiscordBusy(isBusy, activeBtn, busyText) {
+  if (globalDiscordInput)    globalDiscordInput.disabled    = isBusy;
+  if (btnApplyGlobalDiscord) btnApplyGlobalDiscord.disabled  = isBusy;
+  if (btnClearGlobalDiscord) btnClearGlobalDiscord.disabled  = isBusy;
+
+  if (activeBtn) {
+    if (isBusy) {
+      activeBtn.dataset.originalText = activeBtn.textContent;
+      activeBtn.textContent = busyText;
+    } else if (activeBtn.dataset.originalText) {
+      activeBtn.textContent = activeBtn.dataset.originalText;
+      delete activeBtn.dataset.originalText;
+    }
+  }
+}
+
+if (btnApplyGlobalDiscord) {
+  btnApplyGlobalDiscord.addEventListener('click', async () => {
+    const url = globalDiscordInput ? globalDiscordInput.value.trim() : '';
+
+    if (!url) {
+      showToast('⚠️ الرجاء إدخال رابط ديسكورد صالح أولاً.');
+      if (globalDiscordInput) globalDiscordInput.focus();
+      return;
+    }
+
+    if (!confirm('هل أنت متأكد؟ سيتم استبدال رابط الديسكورد الخاص بجميع المنتجات بهذا الرابط.')) {
+      return;
+    }
+
+    _setGlobalDiscordBusy(true, btnApplyGlobalDiscord, '⏳ جارٍ التطبيق...');
+
+    const success = await _bulkSetDiscordForAllProducts(url);
+
+    _setGlobalDiscordBusy(false, btnApplyGlobalDiscord, '');
+
+    if (success) {
+      showToast('✅ تم تطبيق رابط الديسكورد على جميع المنتجات بنجاح!');
+      globalDiscordInput.value = '';
+      await renderAdminProductTable();
+    }
+  });
+}
+
+if (btnClearGlobalDiscord) {
+  btnClearGlobalDiscord.addEventListener('click', async () => {
+    if (!confirm('هل أنت متأكد؟ سيتم حذف رابط الديسكورد من جميع المنتجات (سيتم اعتماد الرابط الافتراضي بدلاً منه).')) {
+      return;
+    }
+
+    _setGlobalDiscordBusy(true, btnClearGlobalDiscord, '⏳ جارٍ الحذف...');
+
+    const success = await _bulkSetDiscordForAllProducts('');
+
+    _setGlobalDiscordBusy(false, btnClearGlobalDiscord, '');
+
+    if (success) {
+      showToast('✅ تم حذف روابط الديسكورد من جميع المنتجات.');
+      if (globalDiscordInput) globalDiscordInput.value = '';
+      await renderAdminProductTable();
+    }
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

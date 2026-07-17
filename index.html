@@ -37,6 +37,907 @@
 
   <link rel="stylesheet" href="style.css">
 
+  <!-- ══════════════════════════════════════════════════════════════════════
+       EDIT PRODUCT MODAL — Embedded CSS Styles
+       Premium Dark & Red Neon Theme — matches Dz Vibes Shop design language
+       Active border accent colour: #ff1e27
+       ══════════════════════════════════════════════════════════════════════ -->
+  <style>
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       1. OVERLAY — full-screen fixed backdrop
+       ═══════════════════════════════════════════════════════════════════════ */
+    #editProductModalOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* Luxury dark tint with blur */
+      background: rgba(0, 0, 0, 0.84);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      /* Hidden by default — JS adds .show */
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.32s ease, visibility 0.32s ease;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    /* Reveal state toggled by openEditModal() in script.js */
+    #editProductModalOverlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       2. MODAL BOX — the centered dark card
+       ═══════════════════════════════════════════════════════════════════════ */
+    #editProductModal {
+      background: #0c0c0c;
+      /* Subtle red neon ring + deep shadow stack */
+      border: 1px solid #1e1e1e;
+      box-shadow:
+        0 0 0 1px rgba(255, 30, 39, 0.07),
+        0 0 0 3px rgba(255, 30, 39, 0.03),
+        0 8px 32px rgba(0, 0, 0, 0.65),
+        0 40px 120px rgba(0, 0, 0, 0.85);
+      border-radius: 22px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 92vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      /* Thin red scrollbar */
+      scrollbar-width: thin;
+      scrollbar-color: #ff1e27 #141414;
+      /* Spring entrance animation */
+      transform: translateY(40px) scale(0.955);
+      transition:
+        transform 0.36s cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity   0.30s ease;
+      opacity: 0;
+      position: relative;
+      direction: ltr;
+    }
+
+    /* Animate in when overlay gets .show */
+    #editProductModalOverlay.show #editProductModal {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    /* WebKit scrollbar — thin red thumb */
+    #editProductModal::-webkit-scrollbar        { width: 5px; }
+    #editProductModal::-webkit-scrollbar-track  { background: #141414; border-radius: 10px; }
+    #editProductModal::-webkit-scrollbar-thumb  { background: #ff1e27; border-radius: 10px; }
+    #editProductModal::-webkit-scrollbar-thumb:hover { background: #e6000a; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       3. STICKY HEADER
+       ═══════════════════════════════════════════════════════════════════════ */
+    .edit-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 20px 26px 18px;
+      border-bottom: 1px solid #181818;
+      /* Sticks to top while body scrolls */
+      position: sticky;
+      top: 0;
+      background: #0c0c0c;
+      z-index: 4;
+    }
+
+    /* Left-edge red accent stripe */
+    .edit-modal-header::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, #ff1e27 0%, #7a0008 100%);
+      border-radius: 0 3px 3px 0;
+    }
+
+    /* ── Header title cluster ── */
+    .edit-modal-header-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 800;
+      color: #ffffff;
+      font-family: 'Poppins', sans-serif;
+      letter-spacing: 0.15px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .edit-modal-emoji {
+      font-size: 22px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .edit-modal-title-text {
+      color: #ffffff;
+      white-space: nowrap;
+    }
+
+    /* Accent pill — shows product name, updated by JS */
+    .edit-modal-title-accent {
+      color: #ff6060;
+      font-size: 12.5px;
+      font-weight: 600;
+      background: rgba(255, 30, 39, 0.09);
+      border: 1px solid rgba(255, 30, 39, 0.22);
+      border-radius: 6px;
+      padding: 3px 10px;
+      white-space: nowrap;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 1;
+    }
+
+    /* ── Close × button ── */
+    #editModalCloseBtn {
+      flex-shrink: 0;
+      background: #1a1a1a;
+      border: 1px solid #2c2c2c;
+      color: #777;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 17px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+      transition:
+        background   0.20s ease,
+        color        0.20s ease,
+        border-color 0.20s ease,
+        transform    0.16s ease;
+    }
+
+    #editModalCloseBtn:hover {
+      background: #ff1e27;
+      color: #fff;
+      border-color: #ff1e27;
+      transform: rotate(90deg);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       4. SCROLLABLE BODY
+       ═══════════════════════════════════════════════════════════════════════ */
+    .edit-modal-body {
+      padding: 26px 26px 12px;
+    }
+
+    /* form itself uses display:contents so children participate in the grid */
+    #editProductForm {
+      display: contents;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       5. FORM GRID — responsive 2-column layout
+          .edit-full-width spans both columns
+       ═══════════════════════════════════════════════════════════════════════ */
+    .edit-modal-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px 22px;
+    }
+
+    .edit-modal-form-grid .edit-full-width {
+      grid-column: 1 / -1;
+    }
+
+    /* Collapse to single column on narrow screens */
+    @media (max-width: 620px) {
+      .edit-modal-form-grid {
+        grid-template-columns: 1fr;
+      }
+      .edit-modal-form-grid .edit-full-width {
+        grid-column: 1;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       6. SECTION DIVIDERS — ruled lines with centred label
+       ═══════════════════════════════════════════════════════════════════════ */
+    .edit-form-section-divider {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0 2px;
+    }
+
+    .edit-form-section-divider span {
+      font-size: 10px;
+      font-weight: 800;
+      color: #3d3d3d;
+      text-transform: uppercase;
+      letter-spacing: 1.3px;
+      white-space: nowrap;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .edit-form-section-divider::before,
+    .edit-form-section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #1e1e1e, transparent);
+    }
+
+    @media (max-width: 620px) {
+      .edit-form-section-divider { grid-column: 1; }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       7. FIELD GROUPS — label + control
+       ═══════════════════════════════════════════════════════════════════════ */
+    .edit-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .edit-field-group > label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.75px;
+      font-family: 'Poppins', sans-serif;
+      user-select: none;
+    }
+
+    /* ── Shared base for all text controls ── */
+    .edit-field-group input[type="text"],
+    .edit-field-group input[type="url"],
+    .edit-field-group input[type="number"],
+    .edit-field-group select,
+    .edit-field-group textarea {
+      background: #121212;
+      border: 1.5px solid #222222;
+      color: #e6e6e6;
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-family: 'Poppins', sans-serif;
+      outline: none;
+      width: 100%;
+      box-sizing: border-box;
+      -webkit-appearance: none;
+      appearance: none;
+      transition:
+        border-color 0.22s ease,
+        box-shadow   0.22s ease,
+        background   0.22s ease;
+    }
+
+    /* Red neon glow on focus — uses the #ff1e27 brand accent */
+    .edit-field-group input[type="text"]:focus,
+    .edit-field-group input[type="url"]:focus,
+    .edit-field-group input[type="number"]:focus,
+    .edit-field-group select:focus,
+    .edit-field-group textarea:focus {
+      border-color: #ff1e27;
+      box-shadow:
+        0 0 0 3px rgba(255, 30, 39, 0.13),
+        0 0 18px rgba(255, 30, 39, 0.07);
+      background: #161616;
+    }
+
+    /* Hover state — faint red border preview */
+    .edit-field-group input[type="text"]:hover:not(:focus),
+    .edit-field-group input[type="url"]:hover:not(:focus),
+    .edit-field-group input[type="number"]:hover:not(:focus),
+    .edit-field-group select:hover:not(:focus),
+    .edit-field-group textarea:hover:not(:focus) {
+      border-color: #2e2e2e;
+    }
+
+    /* Placeholder tint */
+    .edit-field-group input::placeholder,
+    .edit-field-group textarea::placeholder {
+      color: #303030;
+      font-size: 13px;
+    }
+
+    /* Select — custom dropdown arrow */
+    .edit-field-group select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23444' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    .edit-field-group select option   { background: #121212; color: #e6e6e6; }
+    .edit-field-group select optgroup { background: #0c0c0c; color: #666; font-style: normal; }
+
+    /* Textarea */
+    .edit-field-group textarea {
+      resize: vertical;
+      min-height: 88px;
+      line-height: 1.65;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       8. CHECKBOX ROWS — boolean flag toggles
+       ═══════════════════════════════════════════════════════════════════════ */
+    .edit-checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .edit-checkbox-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      background: #121212;
+      border: 1.5px solid #202020;
+      border-radius: 11px;
+      padding: 13px 15px;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.20s ease, background 0.20s ease;
+    }
+
+    .edit-checkbox-row:hover {
+      border-color: #ff1e27;
+      background: #161616;
+    }
+
+    .edit-checkbox-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin: 1px 0 0;
+      cursor: pointer;
+      accent-color: #ff1e27;
+    }
+
+    .edit-checkbox-row > label {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #bfbfbf;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+      /* Override uppercase from .edit-field-group > label */
+      text-transform: none;
+      letter-spacing: 0;
+      line-height: 1.45;
+    }
+
+    .edit-checkbox-row > label small {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      color: #484848;
+      margin-top: 3px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       9. LIVE PRICE PREVIEW BOX
+       ═══════════════════════════════════════════════════════════════════════ */
+    #edit-pricePreview {
+      background: #121212;
+      border: 1.5px solid #202020;
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 13px;
+      color: #777;
+      font-family: 'Poppins', sans-serif;
+      line-height: 1.8;
+      min-height: 54px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+      transition: border-color 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    /* Highlighted final price */
+    #edit-pricePreview strong {
+      color: #ff6060;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    /* Strikethrough for base price when discounted */
+    #edit-pricePreview s {
+      color: #444;
+      font-size: 13px;
+    }
+
+    /* Small meta line (profit %, discount %) */
+    #edit-pricePreview .edit-preview-meta {
+      color: #444;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    /* Subtle neon glow when a valid price is present */
+    #edit-pricePreview.has-price {
+      border-color: rgba(255, 30, 39, 0.22);
+      box-shadow: 0 0 14px rgba(255, 30, 39, 0.05);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       10. VARIATIONS SECTION
+           Sits below the main grid, always full width
+       ═══════════════════════════════════════════════════════════════════════ */
+    .edit-variations-wrapper {
+      margin-top: 10px;
+      padding-top: 22px;
+      border-top: 1px dashed #1e1e1e;
+    }
+
+    /* ── Section title row ── */
+    .edit-variations-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .edit-variations-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #484848;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* Left red bar accent */
+    .edit-variations-title::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background: #ff1e27;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Count badge */
+    .edit-variations-count-badge {
+      background: rgba(255, 30, 39, 0.09);
+      border: 1px solid rgba(255, 30, 39, 0.20);
+      color: #ff6060;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 10px;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* ── Scrollable list of rows ── */
+    #editVariationsList {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-bottom: 12px;
+      max-height: 290px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #ff1e27 #141414;
+      padding-right: 2px;
+    }
+
+    #editVariationsList::-webkit-scrollbar       { width: 4px; }
+    #editVariationsList::-webkit-scrollbar-track { background: #141414; border-radius: 10px; }
+    #editVariationsList::-webkit-scrollbar-thumb { background: #ff1e27; border-radius: 10px; }
+
+    /* ── Individual variation row ── */
+    .edit-variation-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: #121212;
+      border: 1px solid #1e1e1e;
+      border-radius: 10px;
+      padding: 10px 13px;
+      transition: border-color 0.20s ease, box-shadow 0.20s ease;
+    }
+
+    .edit-variation-row:hover        { border-color: #2a2a2a; box-shadow: 0 2px 10px rgba(0,0,0,.3); }
+    .edit-variation-row:focus-within { border-color: rgba(255, 30, 39, 0.30); }
+
+    /* Name + price inputs inside each variation row */
+    .edit-variation-name-input,
+    .edit-variation-price-input {
+      background: #0c0c0c;
+      border: 1px solid #1e1e1e;
+      color: #dedede;
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: 'Poppins', sans-serif;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.20s ease, box-shadow 0.20s ease;
+    }
+
+    .edit-variation-name-input  { flex: 1 1 175px; min-width: 130px; }
+    .edit-variation-price-input { flex: 0 1 118px; min-width: 98px;  }
+
+    .edit-variation-name-input:focus,
+    .edit-variation-price-input:focus {
+      border-color: #ff1e27;
+      box-shadow: 0 0 0 2px rgba(255, 30, 39, 0.11);
+    }
+
+    .edit-variation-name-input::placeholder,
+    .edit-variation-price-input::placeholder { color: #2a2a2a; }
+
+    /* Active/inactive toggle */
+    .edit-variation-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #777;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .edit-variation-toggle input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      cursor: pointer;
+      accent-color: #ff1e27;
+    }
+
+    /* Remove (×) button on each row */
+    .edit-variation-remove-btn {
+      background: rgba(255, 30, 39, 0.07);
+      border: 1px solid rgba(255, 77, 85, 0.22);
+      color: #ff6060;
+      border-radius: 7px;
+      padding: 7px 11px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'Poppins', sans-serif;
+      white-space: nowrap;
+      line-height: 1;
+      transition: background 0.20s ease, color 0.20s ease, border-color 0.20s ease;
+    }
+
+    .edit-variation-remove-btn:hover {
+      background: #ff1e27;
+      color: #fff;
+      border-color: #ff1e27;
+    }
+
+    /* ── Add variation dashed button ── */
+    #editAddVariationBtn {
+      width: 100%;
+      background: transparent;
+      border: 1.5px dashed #282828;
+      color: #484848;
+      border-radius: 9px;
+      padding: 11px 18px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      letter-spacing: 0.3px;
+      transition: border-color 0.20s ease, color 0.20s ease, background 0.20s ease;
+    }
+
+    #editAddVariationBtn:hover {
+      border-color: #ff1e27;
+      color: #ff6060;
+      background: rgba(255, 30, 39, 0.04);
+    }
+
+    /* Empty state placeholder inside the list */
+    .edit-variations-empty {
+      text-align: center;
+      padding: 22px 16px;
+      color: #383838;
+      font-size: 13px;
+      font-family: 'Poppins', sans-serif;
+      line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       11. STICKY FOOTER — Cancel + Save Changes
+       ═══════════════════════════════════════════════════════════════════════ */
+    .edit-modal-footer {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 18px 26px 24px;
+      border-top: 1px solid #181818;
+      position: sticky;
+      bottom: 0;
+      background: #0c0c0c;
+      z-index: 4;
+    }
+
+    /* ── Save Changes — primary red CTA ── */
+    #editModalSaveBtn {
+      flex: 1;
+      background: linear-gradient(135deg, #ff1e27 0%, #c8000a 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 800;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+      box-shadow: 0 4px 22px rgba(255, 30, 39, 0.38);
+      transition:
+        background  0.22s ease,
+        transform   0.22s ease,
+        box-shadow  0.22s ease;
+    }
+
+    #editModalSaveBtn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #ff3540 0%, #e0000a 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(255, 30, 39, 0.52);
+    }
+
+    #editModalSaveBtn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 2px 10px rgba(255, 30, 39, 0.30);
+    }
+
+    #editModalSaveBtn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* ── Cancel — ghost secondary ── */
+    #editModalCancelBtn {
+      flex-shrink: 0;
+      background: #181818;
+      border: 1.5px solid #282828;
+      color: #777;
+      border-radius: 12px;
+      padding: 14px 22px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.20s ease, border-color 0.20s ease, color 0.20s ease;
+    }
+
+    #editModalCancelBtn:hover {
+      background: #212121;
+      border-color: #404040;
+      color: #cccccc;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       12. RESPONSIVE — mobile adjustments
+       ═══════════════════════════════════════════════════════════════════════ */
+    @media (max-width: 620px) {
+      .edit-modal-header  { padding: 15px 18px 13px; }
+      .edit-modal-body    { padding: 18px 16px 8px;  }
+      .edit-modal-footer  { padding: 14px 16px 20px; flex-wrap: wrap; }
+
+      #editProductModal   { border-radius: 16px; max-height: 95vh; }
+
+      .edit-modal-header-title { font-size: 15px; }
+      /* Hide the accent pill on very small screens to save space */
+      .edit-modal-title-accent { display: none; }
+
+      #editModalSaveBtn   { font-size: 14px; padding: 13px 20px; }
+      #editModalCancelBtn { font-size: 13px; padding: 13px 16px; }
+
+      .edit-variation-row { gap: 8px; }
+      .edit-variation-name-input  { min-width: 110px; }
+      .edit-variation-price-input { min-width: 85px; flex-basis: 85px; }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       13. ENTRANCE ANIMATION — staggered fade-up for form regions
+       ═══════════════════════════════════════════════════════════════════════ */
+    @keyframes editFadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0);   }
+    }
+
+    #editProductModalOverlay.show .edit-modal-form-grid {
+      animation: editFadeUp 0.36s ease 0.08s both;
+    }
+
+    #editProductModalOverlay.show .edit-variations-wrapper {
+      animation: editFadeUp 0.36s ease 0.18s both;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       14. GLOBAL DISCORD BULK CONTROLLER
+       Premium dark card with neon-red highlights — sits directly above the
+       Product Control Table. Lets the admin push (or clear) one Discord
+       link across every product in a single action.
+       ═══════════════════════════════════════════════════════════════════════ */
+    .global-discord-card {
+      position: relative;
+      background: linear-gradient(160deg, #0f0f0f 0%, #0a0a0a 100%);
+      border: 1px solid #241414;
+      border-radius: 18px;
+      padding: 22px 24px;
+      margin-bottom: 22px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255, 30, 39, 0.06),
+        0 10px 30px rgba(0, 0, 0, 0.55);
+    }
+
+    /* Faint animated red glow sweep along the top edge */
+    .global-discord-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg,
+        transparent 0%, #ff1e27 25%, #ff5c63 50%, #ff1e27 75%, transparent 100%);
+      opacity: 0.85;
+      animation: globalDiscordSweep 3.2s linear infinite;
+      background-size: 200% 100%;
+    }
+
+    @keyframes globalDiscordSweep {
+      0%   { background-position: 0% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .global-discord-card h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 6px 0;
+      color: #fff;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 19px;
+      letter-spacing: 0.3px;
+      text-shadow: 0 0 14px rgba(255, 30, 39, 0.35);
+    }
+
+    .global-discord-card .global-discord-hint {
+      margin: 0 0 16px 0;
+      color: #8a8a8a;
+      font-size: 12.5px;
+      line-height: 1.6;
+      direction: rtl;
+      text-align: right;
+    }
+
+    .global-discord-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    #global-discord-input {
+      flex: 1 1 260px;
+      min-width: 220px;
+      background: #141414;
+      border: 1.5px solid #2a2a2a;
+      border-radius: 10px;
+      color: #f2f2f2;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13.5px;
+      padding: 12px 14px;
+      direction: rtl;
+      text-align: right;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #global-discord-input::placeholder {
+      color: #5a5a5a;
+    }
+
+    #global-discord-input:focus {
+      border-color: #ff1e27;
+      box-shadow: 0 0 0 3px rgba(255, 30, 39, 0.14);
+    }
+
+    .global-discord-btn-row {
+      display: flex;
+      gap: 10px;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+    }
+
+    .btn-global-apply,
+    .btn-global-clear {
+      appearance: none;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 13.5px;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+
+    .btn-global-apply {
+      background: linear-gradient(135deg, #ff1e27 0%, #b3000a 100%);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(255, 30, 39, 0.35);
+    }
+
+    .btn-global-apply:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(255, 30, 39, 0.5);
+    }
+
+    .btn-global-clear {
+      background: #1a1a1a;
+      color: #ff6b6b;
+      border: 1.5px solid #3a1414;
+    }
+
+    .btn-global-clear:hover:not(:disabled) {
+      background: #241010;
+      border-color: #ff1e27;
+      transform: translateY(-1px);
+    }
+
+    .btn-global-apply:disabled,
+    .btn-global-clear:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    @media (max-width: 620px) {
+      .global-discord-controls { flex-direction: column; }
+      .global-discord-btn-row  { width: 100%; }
+      .btn-global-apply, .btn-global-clear { flex: 1 1 0; }
+    }
+
+  </style>
+
   <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -301,6 +1202,36 @@
           </div>
         </div>
 
+        <!-- ══════════════════════════════════════════════════════════════
+             GLOBAL DISCORD BULK CONTROLLER
+             Push (or clear) one Discord link across every product at once.
+             Wired up by script.js — see the "GLOBAL DISCORD BULK
+             CONTROLLER" section for _handleApplyGlobalDiscord() /
+             _handleClearGlobalDiscord().
+             ══════════════════════════════════════════════════════════════ -->
+        <div class="admin-card global-discord-card">
+          <h3>⚡ Global Discord Bulk Controller</h3>
+          <p class="global-discord-hint">
+            أدخل رابط ديسكورد واحد وطبّقه فورًا على كل المنتجات المسجّلة، أو احذف كل الروابط دفعة واحدة.
+          </p>
+          <div class="global-discord-controls">
+            <input
+              type="url"
+              id="global-discord-input"
+              placeholder="ادخل رابط ديسكورد الموحد لكامل السلعة..."
+              autocomplete="off"
+            >
+            <div class="global-discord-btn-row">
+              <button type="button" id="btn-apply-global-discord" class="btn-global-apply">
+                تطبيق على جميع المنتجات ⚡
+              </button>
+              <button type="button" id="btn-clear-global-discord" class="btn-global-clear">
+                حذف الروابط من الجميع ❌
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Product Table -->
         <div class="admin-card table-card">
           <h3>📋 Product Control Table</h3>
@@ -384,7 +1315,7 @@
     </div>
   </footer>
 
-  <!-- Toast -->
+  <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
   <!-- ══════════════════════════════════════
@@ -419,7 +1350,6 @@
 
         <div class="modal-order-buttons" id="modalOrderButtons">
 
-          <!-- Instagram Order Button in Modal — always opens official Instagram -->
           <a href="https://www.instagram.com/dzvibes_shop/"
              target="_blank"
              rel="noopener noreferrer"
@@ -431,7 +1361,6 @@
             تواصل عبر انستغرام
           </a>
 
-          <!-- Telegram Order Button in Modal — href updated dynamically by JS -->
           <a href="https://t.me/DzVibesShop"
              target="_blank"
              rel="noopener noreferrer"
@@ -443,7 +1372,6 @@
             اطلب عبر التيليغرام
           </a>
 
-          <!-- Discord Order Button in Modal — href updated dynamically by JS -->
           <a href="https://discord.gg/DEZUUhJKma"
              target="_blank"
              rel="noopener noreferrer"
@@ -482,6 +1410,406 @@
       </form>
     </div>
   </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       EDIT PRODUCT MODAL
+       ══════════════════════════════════════════════════════════════════════
+       Hidden by default via CSS (opacity:0; visibility:hidden on the overlay).
+       JavaScript's openEditModal(productId) adds the class "show" to
+       #editProductModalOverlay to reveal it with the spring animation.
+       All field IDs below must exactly match the selectors used in script.js
+       (openEditModal, _handleEditModalSave, _renderEditModalVariations, etc.)
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div
+    id="editProductModalOverlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="editModalHeading"
+  >
+
+    <div id="editProductModal">
+
+      <!-- ════════════════════════════════════════
+           STICKY HEADER
+           Contains title cluster + close button.
+           Position: sticky; top: 0 — defined in CSS.
+           ════════════════════════════════════════ -->
+      <div class="edit-modal-header">
+
+        <div class="edit-modal-header-title">
+          <!-- Pencil emoji icon -->
+          <span class="edit-modal-emoji" aria-hidden="true">✏️</span>
+
+          <!-- Main heading text — JS updates this via #editModalHeading -->
+          <span class="edit-modal-title-text" id="editModalHeading">Edit Product</span>
+
+          <!-- Accent pill badge — JS writes the product name here -->
+          <span
+            class="edit-modal-title-accent"
+            id="editModalProductNameBadge"
+            aria-hidden="true"
+          ></span>
+        </div>
+
+        <!-- Close × button — wired by _bindEditModalEvents() in script.js -->
+        <button
+          type="button"
+          id="editModalCloseBtn"
+          aria-label="Close edit modal"
+        >✕</button>
+
+      </div><!-- /.edit-modal-header -->
+
+      <!-- ════════════════════════════════════════
+           SCROLLABLE BODY
+           Contains the edit form and variations.
+           ════════════════════════════════════════ -->
+      <div class="edit-modal-body">
+
+        <!--
+          The form itself uses display:contents so its children participate
+          directly in the .edit-modal-form-grid CSS grid layout.
+          novalidate — all validation is handled by _handleEditModalSave().
+        -->
+        <form id="editProductForm" novalidate autocomplete="off">
+
+          <!-- Hidden product ID — set by openEditModal() before the modal opens -->
+          <input type="hidden" id="edit-id" name="edit-id">
+
+          <!-- ──────────────────────────────────────────
+               2-COLUMN RESPONSIVE FORM GRID
+               .edit-full-width children span both columns.
+               Collapses to 1 column at ≤ 620 px.
+               ────────────────────────────────────────── -->
+          <div class="edit-modal-form-grid">
+
+            <!-- ╔══════════════════════════════════════╗
+                 ║  SECTION — Basic Information         ║
+                 ╚══════════════════════════════════════╝ -->
+            <div class="edit-form-section-divider edit-full-width">
+              <span>📝 Basic Information</span>
+            </div>
+
+            <!-- Product Title — spans both columns -->
+            <div class="edit-field-group edit-full-width">
+              <label for="edit-title">
+                Product Title
+                <span style="color:#ff1e27;font-size:13px;"> *</span>
+              </label>
+              <input
+                type="text"
+                id="edit-title"
+                name="edit-title"
+                placeholder="e.g. Netflix Premium 1 Month"
+                required
+                autocomplete="off"
+              >
+            </div>
+
+            <!-- Category dropdown — left column -->
+            <div class="edit-field-group">
+              <label for="edit-category">
+                Category
+                <span style="color:#ff1e27;font-size:13px;"> *</span>
+              </label>
+              <!--
+                NOTE: _buildEditModalCategoryDropdown() in script.js
+                will replace the innerHTML of this <select> with the full
+                optgroup tree on first open. The static optgroups below
+                serve as a safe HTML fallback for any edge case where JS
+                has not yet replaced them.
+              -->
+              <select id="edit-category" name="edit-category" required>
+                <option value="">— Select Category —</option>
+
+                <optgroup label="🔌 اشتراكات رقمية">
+                  <option value="sub_digital_keys">Digital Key 🔑</option>
+                  <option value="sub_netflix">Netflix 🎬</option>
+                  <option value="sub_spotify">Spotify 🎵</option>
+                  <option value="sub_shahid">Shahid 💜</option>
+                  <option value="sub_crunchyroll">Crunchyroll 🧡</option>
+                  <option value="sub_other">Other 🛠️</option>
+                </optgroup>
+
+                <optgroup label="📱 شحن ألعاب الهاتف">
+                  <option value="mobile_digital_keys">Digital Key 🔑</option>
+                  <option value="mobile_uid">شحن UID 🆔</option>
+                  <option value="mobile_card">شحن Card 💳</option>
+                </optgroup>
+
+                <optgroup label="🎮 بلاي ستايشن (PSN)">
+                  <option value="psn_digital_keys">Digital Key 🔑</option>
+                  <option value="psn_games">ألعاب 🎮</option>
+                  <option value="psn_gift_cards">Gift Card 💳</option>
+                </optgroup>
+
+                <optgroup label="💚 إكس بوكس (Xbox)">
+                  <option value="xbox_digital_keys">Digital Key 🔑</option>
+                  <option value="xbox_games">ألعاب 🎮</option>
+                  <option value="xbox_gift_cards">Gift Card 💳</option>
+                  <option value="xbox_game_pass">Game Pass 💚</option>
+                </optgroup>
+
+                <optgroup label="🖥️ ألعاب وحسابات PC">
+                  <option value="pc_digital_keys">Digital Key 🔑</option>
+                  <option value="pc_shared_accounts">حسابات مشتركة 👥</option>
+                  <option value="pc_online_accounts">حسابات online 🌐</option>
+                  <option value="pc_offline_accounts">حسابات اوفلاين 🖥️</option>
+                  <option value="pc_gift_cards">Gift Card 💳</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Image URL — right column -->
+            <div class="edit-field-group">
+              <label for="edit-image">🖼️ Image URL</label>
+              <input
+                type="url"
+                id="edit-image"
+                name="edit-image"
+                placeholder="https://example.com/product-image.png"
+                autocomplete="off"
+              >
+            </div>
+
+            <!-- ╔══════════════════════════════════════╗
+                 ║  SECTION — Pricing                   ║
+                 ╚══════════════════════════════════════╝ -->
+            <div class="edit-form-section-divider edit-full-width">
+              <span>💰 Pricing</span>
+            </div>
+
+            <!-- Cost Price — left column -->
+            <div class="edit-field-group">
+              <label for="edit-cost">🏷️ Cost Price (DA)</label>
+              <input
+                type="number"
+                id="edit-cost"
+                name="edit-cost"
+                placeholder="e.g. 1500"
+                step="0.01"
+                min="0"
+                autocomplete="off"
+              >
+            </div>
+
+            <!-- Selling Price — right column -->
+            <div class="edit-field-group">
+              <label for="edit-sellingPrice">💰 Selling Price (DA)</label>
+              <input
+                type="number"
+                id="edit-sellingPrice"
+                name="edit-sellingPrice"
+                placeholder="e.g. 2800"
+                step="0.01"
+                min="0"
+                autocomplete="off"
+              >
+            </div>
+
+            <!-- Discounted Price — left column -->
+            <div class="edit-field-group">
+              <label for="edit-discountedPrice">💥 Discounted Price (DA) — optional</label>
+              <input
+                type="number"
+                id="edit-discountedPrice"
+                name="edit-discountedPrice"
+                placeholder="e.g. 2200 — leave empty if no discount"
+                step="0.01"
+                min="0"
+                autocomplete="off"
+              >
+            </div>
+
+            <!--
+              Live Price Preview — right column.
+              aria-live="polite" announces changes to screen readers.
+              JS writes innerHTML via _updateEditModalPricePreview().
+            -->
+            <div class="edit-field-group">
+              <label>📊 Live Price Preview</label>
+              <div
+                id="edit-pricePreview"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                Final Price: <strong>-- DA</strong>
+              </div>
+            </div>
+
+            <!-- ╔══════════════════════════════════════╗
+                 ║  SECTION — Details                   ║
+                 ╚══════════════════════════════════════╝ -->
+            <div class="edit-form-section-divider edit-full-width">
+              <span>📋 Details</span>
+            </div>
+
+            <!-- Description — full width textarea -->
+            <div class="edit-field-group edit-full-width">
+              <label for="edit-description">📄 Product Description</label>
+              <textarea
+                id="edit-description"
+                name="edit-description"
+                rows="4"
+                placeholder="Optional — describe the product, delivery steps, warranty, etc."
+              ></textarea>
+            </div>
+
+            <!-- Telegram Username Override — left column -->
+            <div class="edit-field-group">
+              <label for="edit-telegram">✈️ Telegram Username Override</label>
+              <input
+                type="text"
+                id="edit-telegram"
+                name="edit-telegram"
+                placeholder="e.g. DzVibesShop (leave blank for global default)"
+                autocomplete="off"
+              >
+            </div>
+
+            <!-- Discord Link Override — right column -->
+            <div class="edit-field-group">
+              <label for="edit-discord">🎮 Discord Link Override</label>
+              <input
+                type="url"
+                id="edit-discord"
+                name="edit-discord"
+                placeholder="https://discord.gg/... (leave blank for global default)"
+                autocomplete="off"
+              >
+            </div>
+
+            <!-- ╔══════════════════════════════════════╗
+                 ║  SECTION — Options / Boolean Flags   ║
+                 ╚══════════════════════════════════════╝ -->
+            <div class="edit-form-section-divider edit-full-width">
+              <span>⚙️ Options</span>
+            </div>
+
+            <!--
+              Checkbox rows — full width.
+              The outer div.edit-checkbox-row captures the click so the entire
+              row is clickable, not just the tiny checkbox. onclick on the row
+              delegates to the checkbox; onclick on the checkbox calls
+              event.stopPropagation() to avoid double-toggling.
+              onclick on the label calls event.preventDefault() so the label
+              doesn't also fire a second toggle.
+            -->
+            <div class="edit-field-group edit-full-width">
+              <div class="edit-checkbox-group">
+
+                <!-- Top Seller toggle -->
+                <div
+                  class="edit-checkbox-row"
+                  onclick="document.getElementById('edit-topSeller').click()"
+                >
+                  <input
+                    type="checkbox"
+                    id="edit-topSeller"
+                    name="edit-topSeller"
+                    onclick="event.stopPropagation()"
+                  >
+                  <label
+                    for="edit-topSeller"
+                    onclick="event.preventDefault()"
+                  >
+                    🔥 Mark as Top Seller (HOT badge)
+                    <small>Displays the red HOT badge on the product card in the storefront</small>
+                  </label>
+                </div>
+
+                <!-- Available toggle — pre-checked because most products are available -->
+                <div
+                  class="edit-checkbox-row"
+                  onclick="document.getElementById('edit-available').click()"
+                >
+                  <input
+                    type="checkbox"
+                    id="edit-available"
+                    name="edit-available"
+                    onclick="event.stopPropagation()"
+                    checked
+                  >
+                  <label
+                    for="edit-available"
+                    onclick="event.preventDefault()"
+                  >
+                    ✅ Product is Available
+                    <small>Uncheck to mark as out-of-stock — disables Telegram order button</small>
+                  </label>
+                </div>
+
+              </div><!-- /.edit-checkbox-group -->
+            </div><!-- /.edit-field-group.edit-full-width (options) -->
+
+          </div><!-- /.edit-modal-form-grid -->
+
+          <!-- ════════════════════════════════════════════
+               VARIATIONS SECTION
+               Sits below the 2-column grid, always full
+               width. _renderEditModalVariations() injects
+               .edit-variation-row elements into #editVariationsList.
+               _createEditVariationRow() builds each row DOM node.
+               ════════════════════════════════════════════ -->
+          <div class="edit-variations-wrapper" id="editVariationsSection">
+
+            <div class="edit-variations-header">
+              <div class="edit-variations-title">
+                📦 Product Variations
+                <!--
+                  Count badge — JS may update the text content of this element
+                  to reflect how many packages are currently in the list.
+                -->
+                <span
+                  class="edit-variations-count-badge"
+                  id="editVariationsCountBadge"
+                >Packages / باقات</span>
+              </div>
+            </div><!-- /.edit-variations-header -->
+
+            <!--
+              Variation rows are injected here by _renderEditModalVariations().
+              The empty-state div is shown by default; JS replaces it once
+              rows are appended.
+            -->
+            <div id="editVariationsList">
+              <div class="edit-variations-empty">
+                No variations added yet — click the button below to add packages.
+              </div>
+            </div><!-- /#editVariationsList -->
+
+            <!-- Dashed "add" button — wired by _bindEditModalEvents() -->
+            <button type="button" id="editAddVariationBtn">
+              + Add Variation / باقة جديدة
+            </button>
+
+          </div><!-- /.edit-variations-wrapper / #editVariationsSection -->
+
+        </form><!-- /#editProductForm -->
+      </div><!-- /.edit-modal-body -->
+
+      <!-- ════════════════════════════════════════
+           STICKY FOOTER
+           Cancel + Save Changes action buttons.
+           Position: sticky; bottom: 0 — defined in CSS.
+           Both buttons are wired by _bindEditModalEvents().
+           ════════════════════════════════════════ -->
+      <div class="edit-modal-footer">
+
+        <!-- Cancel — closes modal without persisting any changes -->
+        <button type="button" id="editModalCancelBtn">
+          Cancel
+        </button>
+
+        <!-- Save Changes — triggers _handleEditModalSave() via script.js -->
+        <button type="button" id="editModalSaveBtn">
+          💾 Save Changes
+        </button>
+
+      </div><!-- /.edit-modal-footer -->
+
+    </div><!-- /#editProductModal -->
+  </div><!-- /#editProductModalOverlay -->
 
   <script src="app.js"></script>
 </body>
