@@ -19,7 +19,7 @@ const CONFIG = {
   INSTAGRAM_URL:     "https://www.instagram.com/dzvibes_shop/",
   TELEGRAM_URL:      "https://t.me/DzVibesShop",
   TELEGRAM_USERNAME: "DzVibesShop",
-  DISCORD_INVITE:    "https://discord.com/invite/cPSgv6F8X9",
+  DISCORD_INVITE:    "https://discord.gg/DEZUUhJKma",
   ADMIN_PASSWORD:    "Dz.Vibes.0107@",
   STORAGE_KEYS: {
     ADMIN_SESSION: "dzvibes_admin_session"
