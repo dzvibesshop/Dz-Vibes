@@ -17,6 +17,31 @@ const SUPABASE_ANON_KEY = 'sb_publishable_xZPIAOb59rGWmUvnI__Pyw_ijtSFRwo';
 // ✅ FIXED: createClient يأخذ URL بدون /rest/v1/ لأن المكتبة تضيفها تلقائياً
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+
+// دالة فحص حالة المتجر وتحديث الواجهة
+async function checkStoreStatus() {
+    const { data, error } = await supabaseClient
+        .from('store_settings')
+        .select('is_active')
+        .single();
+
+    if (!error && data) {
+        // إذا كان المتجر في وضع الصيانة
+        if (data.is_active === false) {
+            document.body.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; text-align: center; background-color: #121212; color: white;">
+                    <h1 style="font-size: 3rem; margin-bottom: 10px;">🚧</h1>
+                    <h2 style="font-size: 2rem;">المتجر في عملية صيانة</h2>
+                    <p style="font-size: 1.2rem; color: #aaa;">نحن نقوم بتطوير خدماتنا لأجلكم، يرجى العودة لاحقاً.</p>
+                </div>
+            `;
+        }
+    }
+}
+
+// استدعاء الدالة عند تحميل الصفحة
+checkStoreStatus();
+
 /* ══════════════════════════════════════════════════════════════════════════
    ② CONFIGURATION
    ══════════════════════════════════════════════════════════════════════════ */
