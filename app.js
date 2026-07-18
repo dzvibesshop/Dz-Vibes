@@ -3,14 +3,18 @@
                                   Supabase Backend + Promo Codes + Variations
                                   + Full Sub-Category Filtering System
                                   + Variation Picker Popup Modal
+                                  + Store Settings / Maintenance Mode Support
+                                  ✅ FIXED: is_available / is_hot / discord_link
+                                            / variations / promo_codes mapping
    ========================================================================== */
 
 /* ══════════════════════════════════════════════════════════════════════════
    ① SUPABASE CONFIG
    ══════════════════════════════════════════════════════════════════════════ */
-const SUPABASE_URL      = 'https://kbyjyfmifsufxbmhnwnq.supabase.co/rest/v1/';
+const SUPABASE_URL      = 'https://kbyjyfmifsufxbmhnwnq.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_xZPIAOb59rGWmUvnI__Pyw_ijtSFRwo';
 
+// ✅ FIXED: createClient يأخذ URL بدون /rest/v1/ لأن المكتبة تضيفها تلقائياً
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -69,7 +73,6 @@ function injectVariationDynamicStyles() {
   const style = document.createElement('style');
   style.id = 'dzvibes-variations-style';
   style.textContent = `
-    /* Storefront chips (kept for non-variation cards / fallback) */
     .variation-chips-row {
       display: flex;
       flex-wrap: wrap;
@@ -177,14 +180,13 @@ function injectSubcategoryStyles() {
 injectSubcategoryStyles();
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ②.7 DYNAMIC STYLES — Variation Picker Modal (البطاقة المنبثقة)
+   ②.7 DYNAMIC STYLES — Variation Picker Modal
    ══════════════════════════════════════════════════════════════════════════ */
 function injectVariationModalStyles() {
   if (document.getElementById('dzvibes-varmodal-style')) return;
   const style = document.createElement('style');
   style.id = 'dzvibes-varmodal-style';
   style.textContent = `
-    /* ── Overlay ── */
     #variationPickerOverlay {
       position: fixed;
       inset: 0;
@@ -205,8 +207,6 @@ function injectVariationModalStyles() {
       opacity: 1;
       visibility: visible;
     }
-
-    /* ── Modal box ── */
     #variationPickerModal {
       background: #111111;
       border: 1px solid #2a2a2a;
@@ -229,19 +229,9 @@ function injectVariationModalStyles() {
       transform: translateY(0) scale(1);
       opacity: 1;
     }
-    #variationPickerModal::-webkit-scrollbar {
-      width: 5px;
-    }
-    #variationPickerModal::-webkit-scrollbar-track {
-      background: #1a1a1a;
-      border-radius: 10px;
-    }
-    #variationPickerModal::-webkit-scrollbar-thumb {
-      background: #ff1a1a;
-      border-radius: 10px;
-    }
-
-    /* ── Close button ── */
+    #variationPickerModal::-webkit-scrollbar { width: 5px; }
+    #variationPickerModal::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 10px; }
+    #variationPickerModal::-webkit-scrollbar-thumb { background: #ff1a1a; border-radius: 10px; }
     #varModalCloseBtn {
       position: absolute;
       top: 14px;
@@ -262,13 +252,7 @@ function injectVariationModalStyles() {
       z-index: 2;
       flex-shrink: 0;
     }
-    #varModalCloseBtn:hover {
-      background: #ff1a1a;
-      color: #fff;
-      border-color: #ff1a1a;
-    }
-
-    /* ── Product image banner ── */
+    #varModalCloseBtn:hover { background: #ff1a1a; color: #fff; border-color: #ff1a1a; }
     .var-modal-image-wrap {
       position: relative;
       width: 100%;
@@ -277,12 +261,7 @@ function injectVariationModalStyles() {
       border-radius: 20px 20px 0 0;
       flex-shrink: 0;
     }
-    .var-modal-image-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
+    .var-modal-image-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .var-modal-image-overlay {
       position: absolute;
       inset: 0;
@@ -313,13 +292,7 @@ function injectVariationModalStyles() {
       backdrop-filter: blur(4px);
       font-family: inherit;
     }
-
-    /* ── Body ── */
-    .var-modal-body {
-      padding: 20px 18px 24px;
-    }
-
-    /* ── Section label ── */
+    .var-modal-body { padding: 20px 18px 24px; }
     .var-modal-section-label {
       font-size: 14px;
       font-weight: 700;
@@ -337,14 +310,7 @@ function injectVariationModalStyles() {
       height: 1px;
       background: linear-gradient(to left, transparent, #2a2a2a);
     }
-
-    /* ── Vertical package buttons list ── */
-    .var-modal-packages-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
+    .var-modal-packages-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
     .var-modal-pkg-btn {
       width: 100%;
       background: #181818;
@@ -383,18 +349,14 @@ function injectVariationModalStyles() {
       color: #fff;
       transform: translateX(-2px);
     }
-    .var-modal-pkg-btn:hover:not(.var-pkg-disabled)::before {
-      background: #ff1a1a;
-    }
+    .var-modal-pkg-btn:hover:not(.var-pkg-disabled)::before { background: #ff1a1a; }
     .var-modal-pkg-btn.var-pkg-selected {
       background: linear-gradient(135deg, #1e0a0a 0%, #2a0f0f 100%);
       border-color: #ff1a1a;
       color: #fff;
       box-shadow: 0 0 0 1px rgba(255,26,26,0.3), 0 4px 20px rgba(255,26,26,0.15);
     }
-    .var-modal-pkg-btn.var-pkg-selected::before {
-      background: #ff1a1a;
-    }
+    .var-modal-pkg-btn.var-pkg-selected::before { background: #ff1a1a; }
     .var-modal-pkg-btn.var-pkg-disabled {
       opacity: 0.38;
       cursor: not-allowed;
@@ -402,20 +364,9 @@ function injectVariationModalStyles() {
       background: #0f0f0f;
       border-color: #222;
     }
-    .var-pkg-name {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex: 1;
-    }
-    .var-pkg-icon {
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-    .var-pkg-name-text {
-      font-size: 15px;
-      font-weight: 700;
-    }
+    .var-pkg-name { display: flex; align-items: center; gap: 10px; flex: 1; }
+    .var-pkg-icon { font-size: 18px; flex-shrink: 0; }
+    .var-pkg-name-text { font-size: 15px; font-weight: 700; }
     .var-pkg-price-tag {
       background: rgba(255, 26, 26, 0.12);
       border: 1px solid rgba(255, 26, 26, 0.25);
@@ -451,9 +402,7 @@ function injectVariationModalStyles() {
       transition: opacity 0.2s ease;
       flex-shrink: 0;
     }
-    .var-modal-pkg-btn.var-pkg-selected .var-pkg-selected-check {
-      opacity: 1;
-    }
+    .var-modal-pkg-btn.var-pkg-selected .var-pkg-selected-check { opacity: 1; }
     .var-pkg-unavailable-tag {
       font-size: 10px;
       font-weight: 600;
@@ -464,8 +413,6 @@ function injectVariationModalStyles() {
       border-radius: 10px;
       margin-right: 6px;
     }
-
-    /* ── Price display section ── */
     .var-modal-price-section {
       background: #161616;
       border: 1px solid #2a2a2a;
@@ -478,11 +425,7 @@ function injectVariationModalStyles() {
       gap: 12px;
       flex-wrap: wrap;
     }
-    .var-modal-price-left {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
+    .var-modal-price-left { display: flex; flex-direction: column; gap: 3px; }
     .var-modal-price-label {
       font-size: 12px;
       color: #666;
@@ -490,15 +433,8 @@ function injectVariationModalStyles() {
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .var-modal-selected-name {
-      font-size: 13px;
-      color: #aaa;
-      font-weight: 500;
-    }
-    #varModalSelectedName {
-      color: #ff9999;
-      font-weight: 700;
-    }
+    .var-modal-selected-name { font-size: 13px; color: #aaa; font-weight: 500; }
+    #varModalSelectedName { color: #ff9999; font-weight: 700; }
     .var-modal-price-value {
       font-size: 28px;
       font-weight: 900;
@@ -506,11 +442,7 @@ function injectVariationModalStyles() {
       font-family: inherit;
       letter-spacing: -0.5px;
     }
-    #varModalPriceValue {
-      transition: all 0.2s ease;
-    }
-
-    /* ── Promo code section inside modal ── */
+    #varModalPriceValue { transition: all 0.2s ease; }
     .var-modal-promo-row {
       display: flex;
       gap: 8px;
@@ -531,13 +463,8 @@ function injectVariationModalStyles() {
       direction: ltr;
       text-align: right;
     }
-    .var-modal-promo-row input:focus {
-      border-color: #ff1a1a;
-    }
-    .var-modal-promo-row input::placeholder {
-      color: #444;
-      text-align: right;
-    }
+    .var-modal-promo-row input:focus { border-color: #ff1a1a; }
+    .var-modal-promo-row input::placeholder { color: #444; text-align: right; }
     .var-modal-promo-apply-btn {
       background: #1e1e1e;
       border: 1.5px solid #333;
@@ -551,11 +478,7 @@ function injectVariationModalStyles() {
       white-space: nowrap;
       transition: all 0.2s;
     }
-    .var-modal-promo-apply-btn:hover {
-      background: #ff1a1a;
-      border-color: #ff1a1a;
-      color: #fff;
-    }
+    .var-modal-promo-apply-btn:hover { background: #ff1a1a; border-color: #ff1a1a; color: #fff; }
     .var-modal-promo-msg {
       font-size: 12px;
       font-weight: 600;
@@ -566,13 +489,7 @@ function injectVariationModalStyles() {
     }
     .var-modal-promo-msg.success { color: #4caf50; }
     .var-modal-promo-msg.error   { color: #ff4d4d; }
-
-    /* ── CTA Confirm Button ── */
-    .var-modal-confirm-section {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
+    .var-modal-confirm-section { display: flex; flex-direction: column; gap: 10px; }
     .var-modal-confirm-btn {
       width: 100%;
       background: linear-gradient(135deg, #ff1a1a 0%, #cc0000 100%);
@@ -597,21 +514,10 @@ function injectVariationModalStyles() {
       box-shadow: 0 8px 30px rgba(255, 26, 26, 0.5);
       background: linear-gradient(135deg, #ff3333 0%, #e60000 100%);
     }
-    .var-modal-confirm-btn:active:not(:disabled) {
-      transform: translateY(0);
-    }
-    .var-modal-confirm-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-    .var-modal-confirm-btn svg {
-      flex-shrink: 0;
-    }
-    .var-modal-secondary-btns {
-      display: flex;
-      gap: 8px;
-    }
+    .var-modal-confirm-btn:active:not(:disabled) { transform: translateY(0); }
+    .var-modal-confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+    .var-modal-confirm-btn svg { flex-shrink: 0; }
+    .var-modal-secondary-btns { display: flex; gap: 8px; }
     .var-modal-ig-btn,
     .var-modal-dc-btn {
       flex: 1;
@@ -629,51 +535,86 @@ function injectVariationModalStyles() {
       transition: all 0.2s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    .var-modal-ig-btn {
-      background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
-      color: #fff;
-    }
-    .var-modal-ig-btn:hover {
-      opacity: 0.88;
-      transform: translateY(-1px);
-    }
-    .var-modal-dc-btn {
-      background: #5865f2;
-      color: #fff;
-    }
-    .var-modal-dc-btn:hover {
-      background: #4752c4;
-      transform: translateY(-1px);
-    }
-
-    /* ── No variation selected hint ── */
-    .var-modal-hint {
-      text-align: center;
-      font-size: 12.5px;
-      color: #555;
-      margin-top: 6px;
-    }
-
-    /* ── Responsive ── */
+    .var-modal-ig-btn { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); color: #fff; }
+    .var-modal-ig-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .var-modal-dc-btn { background: #5865f2; color: #fff; }
+    .var-modal-dc-btn:hover { background: #4752c4; transform: translateY(-1px); }
+    .var-modal-hint { text-align: center; font-size: 12.5px; color: #555; margin-top: 6px; }
     @media (max-width: 520px) {
-      .var-modal-image-wrap {
-        height: 160px;
-      }
-      .var-modal-image-title {
-        font-size: 15px;
-      }
-      .var-modal-price-value {
-        font-size: 24px;
-      }
-      .var-modal-confirm-btn {
-        font-size: 15px;
-        padding: 14px 20px;
-      }
+      .var-modal-image-wrap { height: 160px; }
+      .var-modal-image-title { font-size: 15px; }
+      .var-modal-price-value { font-size: 24px; }
+      .var-modal-confirm-btn { font-size: 15px; padding: 14px 20px; }
     }
   `;
   document.head.appendChild(style);
 }
 injectVariationModalStyles();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ②.8 DYNAMIC STYLES — Maintenance Screen + Announcement Bar
+   ══════════════════════════════════════════════════════════════════════════ */
+function injectMaintenanceAndAnnouncementStyles() {
+  if (document.getElementById('dzvibes-maintenance-style')) return;
+  const style = document.createElement('style');
+  style.id = 'dzvibes-maintenance-style';
+  style.textContent = `
+    .announcement-bar {
+      display: none;
+      width: 100%;
+      background: linear-gradient(90deg, #a00000, #ff1a1a, #a00000);
+      color: #fff;
+      text-align: center;
+      font-size: 13.5px;
+      font-weight: 700;
+      padding: 10px 16px;
+      box-sizing: border-box;
+      letter-spacing: 0.3px;
+      direction: rtl;
+      box-shadow: 0 2px 12px rgba(255,26,26,0.35);
+    }
+    .maintenance-screen {
+      max-width: 640px;
+      margin: 80px auto;
+      padding: 50px 30px;
+      text-align: center;
+      direction: rtl;
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      border-radius: 24px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+    }
+    .maintenance-icon {
+      font-size: 64px;
+      margin-bottom: 18px;
+      animation: maintenance-bounce 1.8s ease-in-out infinite;
+    }
+    @keyframes maintenance-bounce {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+    .maintenance-title { font-size: 26px; font-weight: 800; color: #fff; margin: 0 0 12px; }
+    .maintenance-subtitle { font-size: 15px; color: #aaa; line-height: 1.7; margin: 0 0 22px; }
+    .maintenance-announcement {
+      background: #1e1010;
+      border: 1px solid #ff1a1a55;
+      color: #ff9999;
+      font-size: 13.5px;
+      font-weight: 600;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin: 0 0 26px;
+    }
+    .maintenance-socials { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    @media (max-width: 640px) {
+      .maintenance-screen { margin: 40px 16px; padding: 36px 20px; }
+      .maintenance-icon { font-size: 52px; }
+      .maintenance-title { font-size: 21px; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+injectMaintenanceAndAnnouncementStyles();
 
 /* ══════════════════════════════════════════════════════════════════════════
    ②.14 BUILD & INJECT THE VARIATION PICKER MODAL INTO THE DOM
@@ -686,28 +627,16 @@ function buildVariationPickerModalDOM() {
 
   overlay.innerHTML = `
     <div id="variationPickerModal" role="dialog" aria-modal="true" aria-labelledby="varModalTitle">
-
-      <!-- Close button -->
       <button type="button" id="varModalCloseBtn" aria-label="إغلاق">✕</button>
-
-      <!-- Product image header -->
       <div class="var-modal-image-wrap">
         <img id="varModalImage" src="" alt="">
         <div class="var-modal-image-overlay"></div>
         <span id="varModalCatBadge" class="var-modal-cat-badge"></span>
         <div id="varModalTitle" class="var-modal-image-title"></div>
       </div>
-
-      <!-- Body -->
       <div class="var-modal-body">
-
-        <!-- Packages label -->
         <div class="var-modal-section-label">📦 اختر الباقة المناسبة</div>
-
-        <!-- Vertical packages list -->
         <div class="var-modal-packages-list" id="varModalPackagesList"></div>
-
-        <!-- Dynamic price display -->
         <div class="var-modal-price-section">
           <div class="var-modal-price-left">
             <span class="var-modal-price-label">السعر المحدد</span>
@@ -715,27 +644,19 @@ function buildVariationPickerModalDOM() {
           </div>
           <div class="var-modal-price-value" id="varModalPriceValue">— DA</div>
         </div>
-
-        <!-- Promo code -->
         <div class="var-modal-section-label">🎟️ كود الخصم</div>
         <div class="var-modal-promo-row">
           <input type="text" id="varModalPromoInput" placeholder="أدخل كود الخصم" maxlength="20">
           <button type="button" class="var-modal-promo-apply-btn" id="varModalPromoApplyBtn">تطبيق</button>
         </div>
         <div class="var-modal-promo-msg" id="varModalPromoMsg"></div>
-
-        <!-- CTA Buttons -->
         <div class="var-modal-confirm-section">
-
-          <!-- Primary: Telegram -->
           <button type="button" class="var-modal-confirm-btn" id="varModalTelegramBtn">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
               <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
             </svg>
             تأكيد الطلب عبر تيليغرام
           </button>
-
-          <!-- Secondary: Instagram + Discord -->
           <div class="var-modal-secondary-btns">
             <button type="button" class="var-modal-ig-btn" id="varModalInstagramBtn">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -750,10 +671,8 @@ function buildVariationPickerModalDOM() {
               ديسكورد
             </button>
           </div>
-
           <div class="var-modal-hint" id="varModalHint">⬆️ يرجى اختيار باقة أولاً لتفعيل الطلب</div>
         </div>
-
       </div>
     </div>
   `;
@@ -764,28 +683,36 @@ function buildVariationPickerModalDOM() {
 
 /* ══════════════════════════════════════════════════════════════════════════
    ③ SUPABASE PRODUCT HELPERS
+   ✅ FIXED: يستخدم أسماء الأعمدة الصحيحة من قاعدة البيانات
    ══════════════════════════════════════════════════════════════════════════ */
 
 async function fetchProducts() {
+  // ✅ استخدام النجمة (*) لجلب كل الأعمدة المتوفرة مباشرة بدون تسمية يدوية
   const { data, error } = await supabaseClient
     .from('products')
-    .select('*')
+    .select('*') 
+    .eq('is_available', true)
     .order('id', { ascending: true });
 
   if (error) {
     console.error('fetchProducts error:', error.message);
-    showToast('⚠️ تعذّر تحميل المنتجات. تحقق من الاتصال.');
+    showToast('⚠️ تعذّر تحميل المنتجات. تحقق من الاتصال');
     return [];
   }
 
   return (data || []).map(mapDbRowToProduct);
 }
 
-/* ── Column-name mapping helpers ─────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   parseVariations — يحلل حقل variations من JSONB
+   ✅ FIXED: يتعامل مع is_available داخل كل variation object
+   ══════════════════════════════════════════════════════════════════════════ */
 function parseVariations(raw) {
   if (!raw) return [];
 
   let arr = raw;
+
+  // إذا كان string يجب parse أولاً
   if (typeof raw === 'string') {
     try {
       arr = JSON.parse(raw);
@@ -797,56 +724,100 @@ function parseVariations(raw) {
   if (!Array.isArray(arr)) return [];
 
   return arr
-    .map(v => ({
-      id:           v && v.id ? String(v.id) : generateId(),
-      name:         (v && (v.name || v.value)) ? String(v.name || v.value).trim() : '',
-      price:        parseFloat(v && v.price) || 0,
-      is_available: v && v.is_available === false ? false : true
-    }))
-    .filter(v => v.name !== '');
+    .map(v => {
+      if (!v || typeof v !== 'object') return null;
+
+      return {
+        // ✅ FIXED: نقرأ id أو نولّد واحداً جديداً
+        id: v.id ? String(v.id) : generateId(),
+
+        // ✅ FIXED: نقبل name أو value كاسم للـ variation
+        name: String(v.name || v.value || '').trim(),
+
+        // ✅ FIXED: السعر الخاص بهذه الـ variation
+        price: parseFloat(v.price) || 0,
+
+        // ✅ FIXED: is_available داخل JSONB (قد يكون is_available أو available)
+        // نقبل كلا الاسمين للتوافق مع أي بيانات مُدخلة
+        is_available: v.is_available !== false && v.available !== false
+      };
+    })
+    .filter(v => v !== null && v.name !== '');
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   mapDbRowToProduct — يحوّل صف قاعدة البيانات إلى كائن JavaScript
+   ✅ FIXED:
+     - row.name        → title    (عمود الاسم في DB هو "name" وليس "title")
+     - row.is_available → available (Boolean)
+     - row.is_hot       → topSeller (Boolean)
+     - row.discord_link → discordLink (Text)
+     - row.variations   → variations (JSONB parsed array)
+     - row.image_url    → image
+   ══════════════════════════════════════════════════════════════════════════ */
 function mapDbRowToProduct(row) {
+  // استخراج meta المخفية في حقل description (إن وُجدت)
   let meta        = {};
   let description = row.description || '';
 
   if (description.startsWith('__meta__')) {
-    const newline = description.indexOf('\n');
+    const newlineIndex = description.indexOf('\n');
     try {
-      const jsonStr = newline === -1
+      const jsonStr = newlineIndex === -1
         ? description.slice(8)
-        : description.slice(8, newline);
+        : description.slice(8, newlineIndex);
       meta        = JSON.parse(jsonStr);
-      description = newline === -1 ? '' : description.slice(newline + 1);
-    } catch (_) { /* Malformed meta — ignore */ }
+      description = newlineIndex === -1 ? '' : description.slice(newlineIndex + 1);
+    } catch (_) {
+      // meta تالفة — تجاهل
+    }
   }
 
   return {
-    id:               row.id,
-    title:            row.title            || '',
-    category:         row.category         || '',
-    image:            row.image_url        || '',
-    price:            parseFloat(row.price) || 0,
-    cost:             parseFloat(meta.cost)            || 0,
-    profitPercent:    parseFloat(meta.profitPercent)   || 0,
-    discountPercent:  parseFloat(meta.discountPercent) || 0,
-    description:      description,
-    telegramUsername: meta.telegramUsername || '',
-    discordLink:      meta.discordLink      || '',
-    topSeller:        meta.topSeller        === true,
-    available:        meta.available        !== false,
-    variations:       parseVariations(row.variations)
+    id:    row.id,
+
+    // ✅ FIXED: العمود في DB اسمه "name" وليس "title"
+    title: row.name || '',
+
+    category:  row.category  || '',
+
+    // ✅ FIXED: العمود في DB اسمه "image_url"
+    image:     row.image_url || '',
+
+    price:           parseFloat(row.price) || 0,
+
+    // هذه الحقول مُخزنة في meta داخل description
+    cost:            parseFloat(meta.cost)           || 0,
+    profitPercent:   parseFloat(meta.profitPercent)  || 0,
+    discountPercent: parseFloat(meta.discountPercent)|| 0,
+
+    description:     description,
+
+    telegramUsername: row.telegram_username || meta.telegramUsername || '',
+
+    // ✅ FIXED: العمود الصحيح في DB هو "discord_link" (snake_case)
+    discordLink: row.discord_link || '',
+
+    // ✅ FIXED: العمود الصحيح في DB هو "is_hot" (Boolean)
+    topSeller: row.is_hot === true,
+
+    // ✅ FIXED: العمود الصحيح في DB هو "is_available" (Boolean)
+    available: row.is_available === true,
+
+    // ✅ FIXED: العمود الصحيح في DB هو "variations" (JSONB)
+    variations: parseVariations(row.variations)
   };
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
    ④ PROMO CODE HELPERS — Supabase
+   ✅ يستخدم أسماء الأعمدة الصحيحة: code / discount_percent / is_active
    ══════════════════════════════════════════════════════════════════════════ */
 
 async function fetchPromoCodes() {
   const { data, error } = await supabaseClient
     .from('promo_codes')
-    .select('*')
+    .select('id, code, discount_percent, is_active')
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -856,14 +827,147 @@ async function fetchPromoCodes() {
 
   return (data || []).map(row => ({
     id:            row.id,
-    code:          row.code,
+    // ✅ FIXED: العمود في DB هو "code"
+    code:          row.code          || '',
+    // ✅ FIXED: العمود في DB هو "discount_percent"
     discountValue: parseFloat(row.discount_percent) || 0,
+    // ✅ FIXED: العمود في DB هو "is_active"
     isActive:      row.is_active !== false
   }));
 }
 
+/* ── Helper: توليد ID فريد ── */
 const generateId = () =>
   Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ④.5 STORE SETTINGS HELPERS — Supabase
+   ══════════════════════════════════════════════════════════════════════════ */
+
+async function fetchStoreSettings() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('store_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('fetchStoreSettings warning:', error.message);
+      return null;
+    }
+
+    return data || null;
+  } catch (err) {
+    console.warn('fetchStoreSettings unexpected error:', err);
+    return null;
+  }
+}
+
+function isMaintenanceModeActive(settings) {
+  if (!settings) return false;
+
+  if (typeof settings.store_status === 'string') {
+    return settings.store_status.trim().toLowerCase() === 'maintenance';
+  }
+  if (typeof settings.is_maintenance === 'boolean') {
+    return settings.is_maintenance === true;
+  }
+  if (typeof settings.maintenance_mode === 'boolean') {
+    return settings.maintenance_mode === true;
+  }
+
+  return false;
+}
+
+function applyStoreSettingsToStorefront(settings) {
+  if (!settings) return;
+
+  if (settings.telegram_bot_link &&
+      typeof settings.telegram_bot_link === 'string' &&
+      settings.telegram_bot_link.trim()) {
+    const link = settings.telegram_bot_link.trim();
+    CONFIG.TELEGRAM_URL = link;
+    const usernameMatch = link.match(/t\.me\/([^/?]+)/i);
+    if (usernameMatch && usernameMatch[1]) {
+      CONFIG.TELEGRAM_USERNAME = usernameMatch[1];
+    }
+  }
+
+  if (settings.discord_server_link &&
+      typeof settings.discord_server_link === 'string' &&
+      settings.discord_server_link.trim()) {
+    CONFIG.DISCORD_INVITE = settings.discord_server_link.trim();
+  }
+
+  document.querySelectorAll('a[href*="t.me/DzVibesShop"]').forEach(a => {
+    a.href = CONFIG.TELEGRAM_URL;
+  });
+  document.querySelectorAll('a[href*="discord.gg/DEZUUhJKma"]').forEach(a => {
+    a.href = CONFIG.DISCORD_INVITE;
+  });
+
+  if (settings.announcement_text &&
+      typeof settings.announcement_text === 'string' &&
+      settings.announcement_text.trim()) {
+    showAnnouncementBanner(settings.announcement_text.trim());
+  }
+}
+
+function showAnnouncementBanner(text) {
+  let bar = document.getElementById('announcementBar');
+
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id        = 'announcementBar';
+    bar.className = 'announcement-bar';
+
+    const header = document.querySelector('.site-header');
+    if (header && header.parentNode) {
+      header.parentNode.insertBefore(bar, header.nextSibling);
+    } else {
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+  }
+
+  bar.textContent   = `📢 ${text}`;
+  bar.style.display = 'block';
+}
+
+function showMaintenanceScreen(settings) {
+  const main = document.querySelector('main');
+  if (!main) return;
+
+  const announcement = (settings && typeof settings.announcement_text === 'string')
+    ? settings.announcement_text.trim()
+    : '';
+
+  main.innerHTML = `
+    <div class="maintenance-screen">
+      <div class="maintenance-icon">🚧</div>
+      <h1 class="maintenance-title">المتجر في صيانة مؤقتة</h1>
+      <p class="maintenance-subtitle">
+        نعمل حالياً على تحسين تجربتك! سنعود قريباً بمنتجات وعروض أفضل 🔥<br>
+        We're currently under maintenance. We'll be back soon!
+      </p>
+      ${announcement ? `<div class="maintenance-announcement">📢 ${escapeHtml(announcement)}</div>` : ''}
+      <div class="maintenance-socials">
+        <a href="${CONFIG.INSTAGRAM_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-hero-instagram">
+          تواصل عبر انستغرام
+        </a>
+        <a href="${CONFIG.TELEGRAM_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-hero-telegram">
+          تواصل عبر تيليغرام
+        </a>
+        <a href="${CONFIG.DISCORD_INVITE}" target="_blank" rel="noopener noreferrer" class="btn btn-hero-discord">
+          انضم لسيرفرنا
+        </a>
+      </div>
+    </div>
+  `;
+
+  const searchWrapperEl = document.getElementById('searchWrapper');
+  if (searchWrapperEl) searchWrapperEl.style.display = 'none';
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    ⑤ PRICING ENGINE
@@ -883,7 +987,7 @@ const formatPrice = (v) => {
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ⑥ ROUTER
+   ⑥ ROUTER + STORE INITIALIZATION
    ══════════════════════════════════════════════════════════════════════════ */
 const homeView      = document.getElementById('home-view');
 const searchWrapper = document.getElementById('searchWrapper');
@@ -894,13 +998,26 @@ function router() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-window.addEventListener('DOMContentLoaded', router);
+async function initStorefront() {
+  const settings = await fetchStoreSettings();
+  applyStoreSettingsToStorefront(settings);
+
+  if (isMaintenanceModeActive(settings)) {
+    showMaintenanceScreen(settings);
+    return;
+  }
+
+  router();
+}
+
+window.addEventListener('DOMContentLoaded', initStorefront);
 
 document.getElementById('logoHome').addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
+
 /* ══════════════════════════════════════════════════════════════════════════
-   ⑦ CATEGORY FILTER STATE — Main Tabs + Dynamic Sub-Category Chips
+   ⑦ CATEGORY FILTER STATE
    ══════════════════════════════════════════════════════════════════════════ */
 let activeCategory    = 'all';
 let activeSubCategory = 'all';
@@ -948,13 +1065,13 @@ const MAIN_CATEGORIES = {
   subscriptions: {
     legacyValue: 'subscriptions',
     subcats: [
-      { value: 'all',               label: 'الكل 🌟',         all: true },
-      { value: 'sub_digital_keys',  label: 'Digital Key 🔑' },
-      { value: 'sub_netflix',       label: 'Netflix 🎬' },
-      { value: 'sub_spotify',       label: 'Spotify 🎵' },
-      { value: 'sub_shahid',        label: 'Shahid 💜' },
-      { value: 'sub_crunchyroll',   label: 'Crunchyroll 🧡' },
-      { value: 'sub_other',         label: 'Other 🛠️' }
+      { value: 'all',              label: 'الكل 🌟',         all: true },
+      { value: 'sub_digital_keys', label: 'Digital Key 🔑' },
+      { value: 'sub_netflix',      label: 'Netflix 🎬' },
+      { value: 'sub_spotify',      label: 'Spotify 🎵' },
+      { value: 'sub_shahid',       label: 'Shahid 💜' },
+      { value: 'sub_crunchyroll',  label: 'Crunchyroll 🧡' },
+      { value: 'sub_other',        label: 'Other 🛠️' }
     ]
   }
 };
@@ -1034,7 +1151,6 @@ const emptyTitle        = document.getElementById('emptyTitle');
 const emptyMsg          = document.getElementById('emptyMsg');
 const productCountBadge = document.getElementById('productCountBadge');
 
-/* Insert sub-category bar above the products grid on initial load */
 refreshSubcategoryBar();
 
 const SKELETON_COUNT    = 6;
@@ -1086,7 +1202,6 @@ async function renderProductsGrid(filterText = '') {
    ══════════════════════════════════════════════════════════════════════════ */
 function _doRender(allProducts, filterText = '') {
   const term = filterText.trim().toLowerCase();
-
   let filtered;
 
   if (activeCategory === 'all') {
@@ -1101,30 +1216,32 @@ function _doRender(allProducts, filterText = '') {
     filtered = allProducts.filter(p => p.category === activeCategory);
   }
 
-  if (term) filtered = filtered.filter(p =>
-    p.title.toLowerCase().includes(term)
-  );
+  if (term) {
+    filtered = filtered.filter(p =>
+      p.title.toLowerCase().includes(term)
+    );
+  }
 
   productsGrid.innerHTML   = '';
   emptyState.style.display = 'none';
 
   if (allProducts.length === 0) {
-    emptyState.style.display   = 'block';
-    emptyTitle.textContent     = 'لا توجد منتجات بعد';
-    emptyMsg.textContent       = 'تحقق لاحقاً — فريقنا يُعدّ عروضاً رائعة لك!';
+    emptyState.style.display      = 'block';
+    emptyTitle.textContent        = 'لا توجد منتجات بعد';
+    emptyMsg.textContent          = 'تحقق لاحقاً — فريقنا يُعدّ عروضاً رائعة لك!';
     productCountBadge.textContent = '';
-    productsGrid.style.display = 'none';
+    productsGrid.style.display    = 'none';
     return;
   }
 
   if (filtered.length === 0) {
-    emptyState.style.display   = 'block';
-    emptyTitle.textContent     = 'لا توجد منتجات مطابقة';
-    emptyMsg.textContent       = term
+    emptyState.style.display      = 'block';
+    emptyTitle.textContent        = 'لا توجد منتجات مطابقة';
+    emptyMsg.textContent          = term
       ? 'جرّب كلمة بحث مختلفة أو غيّر القسم.'
       : 'لا توجد منتجات في هذا القسم بعد.';
     productCountBadge.textContent = '';
-    productsGrid.style.display = 'none';
+    productsGrid.style.display    = 'none';
     return;
   }
 
@@ -1155,6 +1272,7 @@ function resolveOrderLink(platform, product, message) {
     }
 
     case 'discord':
+      // ✅ يستخدم discordLink الذي جاء من discord_link في DB
       if (product.discordLink && product.discordLink.trim() &&
           product.discordLink.trim() !== '#') {
         return product.discordLink.trim();
@@ -1197,8 +1315,8 @@ async function sendDiscordWebhookEmbed(product, finalPrice, appliedPromo, variat
       color:       15073024,
       thumbnail:   product.image ? { url: product.image } : undefined,
       fields:      fields,
-      footer:    { text: 'Dz Vibes Shop Notification System' },
-      timestamp: new Date().toISOString()
+      footer:      { text: 'Dz Vibes Shop Notification System' },
+      timestamp:   new Date().toISOString()
     }]
   };
 
@@ -1232,6 +1350,26 @@ function buildOrderMessage(product, finalPrice, appliedPromo, variation) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   HTML ESCAPE UTILITIES
+   ══════════════════════════════════════════════════════════════════════════ */
+function escapeHtml(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function escapeAttr(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g,  '&amp;')
+    .replace(/"/g,  '&quot;')
+    .replace(/'/g,  '&#39;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    BUILD PRODUCT CARD
    ══════════════════════════════════════════════════════════════════════════ */
 function buildProductCard(product) {
@@ -1241,29 +1379,32 @@ function buildProductCard(product) {
   const finalPriceNoVar = calculateFinalPrice(product.cost, product.profitPercent, product.discountPercent);
   const hasDiscount     = !hasVariations && parseFloat(product.discountPercent) > 0;
 
+  // ✅ FIXED: يستخدم product.available (الذي جاء من is_available في DB)
   const isAvail = hasVariations
     ? product.variations.some(v => v.is_available)
     : product.available;
 
-  /* For non-variation products we still need the price shown on the card */
   const initialPrice = hasVariations ? 0 : finalPriceNoVar;
 
   const orderMsg      = buildOrderMessage(product, initialPrice, null, null);
   const instagramHref = CONFIG.INSTAGRAM_URL;
   const telegramHref  = resolveOrderLink('telegram', product, orderMsg);
-  const discordHref   = (product.discordLink && product.discordLink.trim() &&
-                         product.discordLink.trim() !== '#')
-                         ? product.discordLink.trim()
-                         : CONFIG.DISCORD_INVITE;
+
+  // ✅ FIXED: يستخدم product.discordLink (الذي جاء من discord_link في DB)
+  const discordHref = (product.discordLink && product.discordLink.trim() &&
+                       product.discordLink.trim() !== '#')
+                       ? product.discordLink.trim()
+                       : CONFIG.DISCORD_INVITE;
 
   const card = document.createElement('div');
   card.className  = 'product-card' + (isAvail ? '' : ' unavailable');
   card.dataset.id = product.id;
 
   let badges = '';
+  // ✅ FIXED: يستخدم product.topSeller (الذي جاء من is_hot في DB)
   if (product.topSeller) badges += `<span class="badge badge-hot">🔥 HOT</span>`;
-  if (hasDiscount)       badges += `<span class="badge badge-sale">💥 SALE</span>`;
-  if (!isAvail)          badges += `<span class="badge badge-outofstock">غير متوفر</span>`;
+  if (hasDiscount)        badges += `<span class="badge badge-sale">💥 SALE</span>`;
+  if (!isAvail)           badges += `<span class="badge badge-outofstock">غير متوفر</span>`;
 
   const catMeta = product.category ? CATEGORY_META[product.category] : null;
   const catChip = catMeta
@@ -1276,7 +1417,7 @@ function buildProductCard(product) {
 
   const dcSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.082.114 18.105.134 18.12a19.919 19.919 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>`;
 
-  /* ── If this product HAS variations: show only the single picker button ── */
+  /* ── منتج له variations → زر واحد فقط ── */
   if (hasVariations) {
     card.innerHTML = `
       <div class="product-image-wrap">
@@ -1286,14 +1427,11 @@ function buildProductCard(product) {
         ${badges}
         ${catChip}
       </div>
-
       <div class="product-body">
         <div class="product-title">${escapeHtml(product.title)}</div>
-
         <button type="button" class="btn btn-learn-more" data-learn-more>
           📄 معرفة المزيد حول المنتج
         </button>
-
         <div class="order-buttons" style="margin-top:12px;">
           <button type="button"
                   class="btn btn-variation-picker"
@@ -1308,7 +1446,7 @@ function buildProductCard(product) {
     return card;
   }
 
-  /* ── No variations: normal card with price, promo input, and 3 order btns ── */
+  /* ── منتج بدون variations → بطاقة عادية ── */
   card.innerHTML = `
     <div class="product-image-wrap">
       <img src="${escapeHtml(product.image)}"
@@ -1317,14 +1455,11 @@ function buildProductCard(product) {
       ${badges}
       ${catChip}
     </div>
-
     <div class="product-body">
       <div class="product-title">${escapeHtml(product.title)}</div>
-
       <button type="button" class="btn btn-learn-more" data-learn-more>
         📄 معرفة المزيد حول المنتج
       </button>
-
       <div class="price-row">
         ${hasDiscount
           ? `<span class="price-original">${formatPrice(basePriceNoVar)} DA</span>`
@@ -1334,7 +1469,6 @@ function buildProductCard(product) {
         </span>
         <span class="applied-promo-tag" data-promo-tag></span>
       </div>
-
       <div class="promo-apply-row">
         <input type="text" placeholder="كود الخصم"
                data-promo-input maxlength="20" ${isAvail ? '' : 'disabled'}>
@@ -1342,7 +1476,6 @@ function buildProductCard(product) {
                 ${isAvail ? '' : 'disabled'}>تطبيق</button>
       </div>
       <div class="promo-msg" data-promo-msg></div>
-
       <div class="order-buttons">
         <a href="${instagramHref}"
            target="_blank"
@@ -1353,7 +1486,6 @@ function buildProductCard(product) {
            title="تواصل عبر انستغرام">
           ${igSvg} انستغرام
         </a>
-
         <a href="${isAvail ? escapeHtml(telegramHref) : 'https://t.me/DzVibesShop'}"
            target="_blank"
            rel="noopener noreferrer"
@@ -1364,7 +1496,6 @@ function buildProductCard(product) {
            ${isAvail ? '' : 'aria-disabled="true"'}>
           ${tgSvg} تيليغرام
         </a>
-
         <a href="${escapeHtml(discordHref)}"
            target="_blank"
            rel="noopener noreferrer"
@@ -1381,24 +1512,6 @@ function buildProductCard(product) {
   return card;
 }
 
-/* HTML escape utilities */
-function escapeHtml(str) {
-  if (!str) return '';
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-function escapeAttr(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
 /* ══════════════════════════════════════════════════════════════════════════
    EVENT DELEGATION — product card clicks
    ══════════════════════════════════════════════════════════════════════════ */
@@ -1409,7 +1522,7 @@ productsGrid.addEventListener('click', async (e) => {
   if (!card) return;
   const productId = card.dataset.id;
 
-  /* ── "اختر الباقة المناسبة" button → open variation picker modal ── */
+  /* ── زر "اختر الباقة المناسبة" ── */
   if (e.target.closest('[data-open-variation-modal]')) {
     const product = _cachedProducts.find(p => String(p.id) === String(productId));
     if (!product) return;
@@ -1417,13 +1530,13 @@ productsGrid.addEventListener('click', async (e) => {
     return;
   }
 
-  /* ── Promo apply button (non-variation cards only) ── */
+  /* ── زر تطبيق كود الخصم (بطاقات بدون variations) ── */
   if (e.target.closest('[data-apply-promo]')) {
     handleApplyPromo(card, productId);
     return;
   }
 
-  /* ── Order buttons (non-variation cards only) ── */
+  /* ── أزرار الطلب (بطاقات بدون variations) ── */
   const orderLink = e.target.closest('.card-order-btn');
   if (orderLink) {
     const platform = orderLink.dataset.order;
@@ -1435,6 +1548,7 @@ productsGrid.addEventListener('click', async (e) => {
       const finalPrice   = parseFloat(card.querySelector('.price-final').dataset.finalPrice);
       const appliedPromo = appliedPromosPerCard[productId] || null;
       sendDiscordWebhookEmbed(product, finalPrice, appliedPromo, null);
+      // ✅ FIXED: يستخدم product.discordLink (من discord_link في DB)
       const discordUrl = (product.discordLink && product.discordLink.trim() &&
                           product.discordLink.trim() !== '#')
                           ? product.discordLink.trim()
@@ -1447,6 +1561,7 @@ productsGrid.addEventListener('click', async (e) => {
       e.preventDefault();
       const product = _cachedProducts.find(p => String(p.id) === String(productId));
       if (!product) return;
+      // ✅ FIXED: يستخدم product.available (من is_available في DB)
       if (!product.available) {
         showToast('⚠️ هذا المنتج غير متوفر حالياً.');
         return;
@@ -1462,7 +1577,7 @@ productsGrid.addEventListener('click', async (e) => {
     return;
   }
 
-  /* ── "معرفة المزيد" button ── */
+  /* ── زر "معرفة المزيد" ── */
   if (e.target.closest('[data-learn-more]')) {
     let product = _cachedProducts.find(p => String(p.id) === String(productId));
     if (!product) {
@@ -1473,8 +1588,6 @@ productsGrid.addEventListener('click', async (e) => {
     if (!product) return;
 
     const hasVariations = Array.isArray(product.variations) && product.variations.length > 0;
-
-    /* For variation products, pass null variation + 0 price (modal shows generic info) */
     const finalPrice = hasVariations
       ? 0
       : parseFloat(card.querySelector('.price-final').dataset.finalPrice);
@@ -1484,7 +1597,7 @@ productsGrid.addEventListener('click', async (e) => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
-   PROMO CODE — card level (non-variation products only)
+   PROMO CODE — card level
    ══════════════════════════════════════════════════════════════════════════ */
 const appliedPromosPerCard = {};
 
@@ -1531,11 +1644,11 @@ function updateCardPriceDisplay(card, productId) {
   const product = _cachedProducts.find(p => String(p.id) === String(productId));
   if (!product) return;
 
-  const base     = calculateFinalPrice(product.cost, product.profitPercent, product.discountPercent);
-  const priceEl  = card.querySelector('.price-final');
-  const tagEl    = card.querySelector('[data-promo-tag]');
-  const applied  = appliedPromosPerCard[productId];
-  let displayed  = base;
+  const base    = calculateFinalPrice(product.cost, product.profitPercent, product.discountPercent);
+  const priceEl = card.querySelector('.price-final');
+  const tagEl   = card.querySelector('[data-promo-tag]');
+  const applied = appliedPromosPerCard[productId];
+  let displayed = base;
 
   if (applied) {
     displayed           = base * (1 - applied.discountValue / 100);
@@ -1550,38 +1663,31 @@ function updateCardPriceDisplay(card, productId) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   ══ VARIATION PICKER MODAL — STATE & OPEN / CLOSE LOGIC ══
+   VARIATION PICKER MODAL — STATE & LOGIC
    ══════════════════════════════════════════════════════════════════════════ */
-
-/* Modal-level state — reset on every open */
 let _varModal = {
-  product:          null,
+  product:           null,
   selectedVariation: null,
-  appliedPromo:     null,
-  displayedPrice:   0
+  appliedPromo:      null,
+  displayedPrice:    0
 };
 
-/**
- * Opens the variation picker modal for the given product.
- * Builds the packages list, resets promo state, and animates the overlay in.
- */
 function openVariationPickerModal(product) {
-  /* Ensure the modal DOM exists (built once on first call) */
   buildVariationPickerModalDOM();
 
-  const overlay       = document.getElementById('variationPickerOverlay');
-  const imgEl         = document.getElementById('varModalImage');
-  const titleEl       = document.getElementById('varModalTitle');
-  const catBadgeEl    = document.getElementById('varModalCatBadge');
-  const pkgListEl     = document.getElementById('varModalPackagesList');
-  const nameEl        = document.getElementById('varModalSelectedName');
-  const priceEl       = document.getElementById('varModalPriceValue');
-  const promoInput    = document.getElementById('varModalPromoInput');
-  const promoMsg      = document.getElementById('varModalPromoMsg');
-  const tgBtn         = document.getElementById('varModalTelegramBtn');
-  const hintEl        = document.getElementById('varModalHint');
+  const overlay    = document.getElementById('variationPickerOverlay');
+  const imgEl      = document.getElementById('varModalImage');
+  const titleEl    = document.getElementById('varModalTitle');
+  const catBadgeEl = document.getElementById('varModalCatBadge');
+  const pkgListEl  = document.getElementById('varModalPackagesList');
+  const nameEl     = document.getElementById('varModalSelectedName');
+  const priceEl    = document.getElementById('varModalPriceValue');
+  const promoInput = document.getElementById('varModalPromoInput');
+  const promoMsg   = document.getElementById('varModalPromoMsg');
+  const tgBtn      = document.getElementById('varModalTelegramBtn');
+  const hintEl     = document.getElementById('varModalHint');
 
-  /* Reset state */
+  // إعادة تهيئة الحالة
   _varModal = {
     product:           product,
     selectedVariation: null,
@@ -1589,9 +1695,8 @@ function openVariationPickerModal(product) {
     displayedPrice:    0
   };
 
-  /* Populate image / title / category */
-  imgEl.src     = product.image;
-  imgEl.alt     = product.title;
+  imgEl.src           = product.image;
+  imgEl.alt           = product.title;
   titleEl.textContent = product.title;
 
   const catMeta = product.category ? CATEGORY_META[product.category] : null;
@@ -1602,25 +1707,24 @@ function openVariationPickerModal(product) {
     catBadgeEl.style.display = 'none';
   }
 
-  /* Clear promo inputs */
-  promoInput.value   = '';
+  promoInput.value    = '';
   promoMsg.textContent = '';
-  promoMsg.className = 'var-modal-promo-msg';
+  promoMsg.className  = 'var-modal-promo-msg';
 
-  /* Reset price display */
   nameEl.textContent  = '—';
   priceEl.textContent = '— DA';
 
-  /* Disable confirm button until a package is selected */
-  tgBtn.disabled    = true;
-  hintEl.style.display = 'block';
+  tgBtn.disabled        = true;
+  hintEl.style.display  = 'block';
 
-  /* Build vertical package buttons */
+  // بناء قائمة الباقات
   pkgListEl.innerHTML = '';
+
   if (!Array.isArray(product.variations) || product.variations.length === 0) {
     pkgListEl.innerHTML = `<p style="color:#555;text-align:center;padding:20px 0;">لا توجد باقات متاحة لهذا المنتج.</p>`;
   } else {
     product.variations.forEach(v => {
+      // ✅ FIXED: يستخدم v.is_available (الحقل الصحيح داخل JSONB)
       const isDisabled = !v.is_available;
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -1639,28 +1743,20 @@ function openVariationPickerModal(product) {
       `;
 
       if (!isDisabled) {
-        btn.addEventListener('click', () => {
-          _varModalSelectPackage(v);
-        });
+        btn.addEventListener('click', () => _varModalSelectPackage(v));
       }
 
       pkgListEl.appendChild(btn);
     });
   }
 
-  /* Show overlay */
   overlay.classList.add('show');
   document.body.style.overflow = 'hidden';
 }
 
-/**
- * Selects a package inside the variation modal, updates price display
- * and enables the confirm buttons.
- */
 function _varModalSelectPackage(variation) {
   _varModal.selectedVariation = variation;
 
-  /* Update button UI */
   const pkgListEl = document.getElementById('varModalPackagesList');
   pkgListEl.querySelectorAll('.var-modal-pkg-btn').forEach(btn => {
     btn.classList.toggle(
@@ -1669,56 +1765,41 @@ function _varModalSelectPackage(variation) {
     );
   });
 
-  /* Recalculate price with any active promo */
   _varModalRecalcPrice();
 
-  /* Enable confirm buttons */
   const tgBtn  = document.getElementById('varModalTelegramBtn');
   const hintEl = document.getElementById('varModalHint');
-  if (tgBtn)  tgBtn.disabled = false;
+  if (tgBtn)  tgBtn.disabled      = false;
   if (hintEl) hintEl.style.display = 'none';
 }
 
-/**
- * Recalculates and updates the price display inside the variation modal.
- * Applies the active promo code if one has been validated.
- */
 function _varModalRecalcPrice() {
   if (!_varModal.selectedVariation) return;
 
-  const base     = parseFloat(_varModal.selectedVariation.price) || 0;
-  const promo    = _varModal.appliedPromo;
-  const final    = promo ? base * (1 - promo.discountValue / 100) : base;
+  const base  = parseFloat(_varModal.selectedVariation.price) || 0;
+  const promo = _varModal.appliedPromo;
+  const final = promo ? base * (1 - promo.discountValue / 100) : base;
 
   _varModal.displayedPrice = final;
 
   const nameEl  = document.getElementById('varModalSelectedName');
   const priceEl = document.getElementById('varModalPriceValue');
 
-  if (nameEl) {
-    nameEl.textContent = _varModal.selectedVariation.name;
-  }
+  if (nameEl)  nameEl.textContent  = _varModal.selectedVariation.name;
   if (priceEl) {
-    priceEl.textContent = `${formatPrice(final)} DA`;
-    /* Animate price change with a quick scale pulse */
+    priceEl.textContent     = `${formatPrice(final)} DA`;
     priceEl.style.transform = 'scale(1.08)';
     priceEl.style.color     = '#ff4d4d';
-    setTimeout(() => {
-      priceEl.style.transform = 'scale(1)';
-    }, 180);
+    setTimeout(() => { priceEl.style.transform = 'scale(1)'; }, 180);
   }
 }
 
-/**
- * Closes the variation picker modal and resets body scroll.
- */
 function closeVariationPickerModal() {
   const overlay = document.getElementById('variationPickerOverlay');
   if (!overlay) return;
   overlay.classList.remove('show');
   document.body.style.overflow = '';
 
-  /* Reset state */
   _varModal = {
     product:           null,
     selectedVariation: null,
@@ -1727,10 +1808,6 @@ function closeVariationPickerModal() {
   };
 }
 
-/**
- * Binds all events INSIDE the variation picker modal.
- * Called once after the modal DOM is injected.
- */
 function bindVariationModalEvents() {
   const overlay       = document.getElementById('variationPickerOverlay');
   const closeBtn      = document.getElementById('varModalCloseBtn');
@@ -1740,22 +1817,18 @@ function bindVariationModalEvents() {
   const igBtn         = document.getElementById('varModalInstagramBtn');
   const dcBtn         = document.getElementById('varModalDiscordBtn');
 
-  /* Close on X button */
   closeBtn.addEventListener('click', closeVariationPickerModal);
 
-  /* Close on overlay backdrop click */
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closeVariationPickerModal();
   });
 
-  /* Close on Escape key */
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && overlay.classList.contains('show')) {
       closeVariationPickerModal();
     }
   });
 
-  /* Promo code apply */
   promoApplyBtn.addEventListener('click', async () => {
     const code     = promoInput.value.trim().toUpperCase();
     const promoMsg = document.getElementById('varModalPromoMsg');
@@ -1778,8 +1851,8 @@ function bindVariationModalEvents() {
     const match = promos.find(p => p.code.toUpperCase() === code);
 
     if (!match || !match.isActive || !(match.discountValue > 0)) {
-      promoMsg.textContent = 'كود غير صالح / Invalid code';
-      promoMsg.className   = 'var-modal-promo-msg error';
+      promoMsg.textContent   = 'كود غير صالح / Invalid code';
+      promoMsg.className     = 'var-modal-promo-msg error';
       _varModal.appliedPromo = null;
       _varModalRecalcPrice();
       return;
@@ -1791,7 +1864,6 @@ function bindVariationModalEvents() {
     _varModalRecalcPrice();
   });
 
-  /* Telegram confirm button */
   tgBtn.addEventListener('click', () => {
     if (!_varModal.product || !_varModal.selectedVariation) {
       showToast('⚠️ يرجى اختيار باقة أولاً.');
@@ -1805,7 +1877,6 @@ function bindVariationModalEvents() {
     closeVariationPickerModal();
   });
 
-  /* Instagram button */
   igBtn.addEventListener('click', () => {
     if (_varModal.product && _varModal.selectedVariation) {
       sendDiscordWebhookEmbed(
@@ -1819,7 +1890,6 @@ function bindVariationModalEvents() {
     closeVariationPickerModal();
   });
 
-  /* Discord button */
   dcBtn.addEventListener('click', () => {
     if (!_varModal.product || !_varModal.selectedVariation) {
       showToast('⚠️ يرجى اختيار باقة أولاً.');
@@ -1827,6 +1897,7 @@ function bindVariationModalEvents() {
     }
     const { product, selectedVariation, appliedPromo, displayedPrice } = _varModal;
     sendDiscordWebhookEmbed(product, displayedPrice, appliedPromo, selectedVariation);
+    // ✅ FIXED: يستخدم product.discordLink (من discord_link في DB)
     const discordUrl = (product.discordLink && product.discordLink.trim() &&
                         product.discordLink.trim() !== '#')
                         ? product.discordLink.trim()
@@ -1837,7 +1908,7 @@ function bindVariationModalEvents() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   PRODUCT DETAILS MODAL (معرفة المزيد)
+   PRODUCT DETAILS MODAL
    ══════════════════════════════════════════════════════════════════════════ */
 const productDetailsModalOverlay = document.getElementById('productDetailsModal');
 const modalProductImage          = document.getElementById('modalProductImage');
@@ -1857,9 +1928,9 @@ function openProductDetailsModal(product, finalPrice, variation = null) {
   const appliedPromo = appliedPromosPerCard[product.id] || null;
   currentModalContext = { product, finalPrice, appliedPromo, variation };
 
-  modalProductImage.src               = product.image;
-  modalProductImage.alt               = product.title;
-  modalProductTitle.textContent       = product.title;
+  modalProductImage.src         = product.image;
+  modalProductImage.alt         = product.title;
+  modalProductTitle.textContent = product.title;
   modalProductDescription.textContent = product.description?.trim()
     ? product.description
     : 'لا يوجد وصف إضافي لهذا المنتج حالياً.\nNo additional description provided yet.';
@@ -1867,7 +1938,6 @@ function openProductDetailsModal(product, finalPrice, variation = null) {
   const hasVariations = Array.isArray(product.variations) && product.variations.length > 0;
 
   if (hasVariations) {
-    /* Show generic info for variation products — no specific price yet */
     modalProductPrice.textContent = `${product.variations.length} باقة/باقات متاحة — اختر من البطاقة المنبثقة`;
   } else {
     modalProductPrice.textContent = variation
@@ -1884,14 +1954,11 @@ function openProductDetailsModal(product, finalPrice, variation = null) {
   }
 
   const orderMsg = buildOrderMessage(product, finalPrice, appliedPromo, variation);
-
   modalInstagramBtn.href = CONFIG.INSTAGRAM_URL;
   modalInstagramBtn.setAttribute('target', '_blank');
   modalInstagramBtn.setAttribute('rel', 'noopener noreferrer');
 
   if (hasVariations) {
-    /* For variation products the telegram / discord buttons in the details
-       modal open the variation picker modal instead of placing a direct order */
     modalTelegramBtn.href = '#';
     modalDiscordBtn.href  = '#';
 
@@ -1907,7 +1974,7 @@ function openProductDetailsModal(product, finalPrice, variation = null) {
       openVariationPickerModal(product);
     };
 
-    modalOutOfStockNote.style.display    = 'none';
+    modalOutOfStockNote.style.display = 'none';
     modalTelegramBtn.classList.remove('btn-disabled-look');
     modalTelegramBtn.removeAttribute('aria-disabled');
     modalTelegramBtn.style.opacity = '';
@@ -1918,6 +1985,7 @@ function openProductDetailsModal(product, finalPrice, variation = null) {
     modalTelegramBtn.setAttribute('rel', 'noopener noreferrer');
     modalTelegramBtn.onclick = null;
 
+    // ✅ FIXED: يستخدم product.discordLink (من discord_link في DB)
     const discordUrl = (product.discordLink && product.discordLink.trim() &&
                         product.discordLink.trim() !== '#')
                         ? product.discordLink.trim()
@@ -1932,10 +2000,9 @@ function openProductDetailsModal(product, finalPrice, variation = null) {
       window.open(discordUrl, '_blank');
     };
 
-    const availableToOrder = product.available;
-
-    if (availableToOrder) {
-      modalOutOfStockNote.style.display    = 'none';
+    // ✅ FIXED: يستخدم product.available (من is_available في DB)
+    if (product.available) {
+      modalOutOfStockNote.style.display = 'none';
       modalTelegramBtn.classList.remove('btn-disabled-look');
       modalTelegramBtn.removeAttribute('aria-disabled');
       modalTelegramBtn.style.pointerEvents = '';
@@ -1944,7 +2011,7 @@ function openProductDetailsModal(product, finalPrice, variation = null) {
       modalOutOfStockNote.style.display = 'block';
       modalTelegramBtn.classList.add('btn-disabled-look');
       modalTelegramBtn.setAttribute('aria-disabled', 'true');
-      modalTelegramBtn.style.opacity    = '0.45';
+      modalTelegramBtn.style.opacity = '0.45';
     }
 
     modalDiscordBtn.classList.remove('btn-disabled-look');
@@ -1973,8 +2040,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
-   VARIATION PICKER BUTTON — inline CSS injection
-   (Ensures "اختر الباقة المناسبة" button always looks correct)
+   VARIATION PICKER BUTTON STYLE
    ══════════════════════════════════════════════════════════════════════════ */
 function injectVariationPickerBtnStyle() {
   if (document.getElementById('dzvibes-varpickerbtn-style')) return;
