@@ -687,12 +687,11 @@ function buildVariationPickerModalDOM() {
    ══════════════════════════════════════════════════════════════════════════ */
 
 async function fetchProducts() {
-  // ✅ استخدام النجمة (*) لجلب كل الأعمدة المتوفرة مباشرة بدون تسمية يدوية
+  // ✅ تم حذف سطر الفلترة لجلب جميع المنتجات
   const { data, error } = await supabaseClient
     .from('products')
-    .select('*') 
-    .eq('is_available', true)
-    .order('id', { ascending: true });
+    .select('*')
+    .order('id', { ascending: true }); // هنا تم إزالة .eq('is_available', true)
 
   if (error) {
     console.error('fetchProducts error:', error.message);
