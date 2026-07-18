@@ -49,7 +49,7 @@ const CONFIG = {
   INSTAGRAM_URL:     "https://www.instagram.com/dzvibes_shop/",
   TELEGRAM_URL:      "https://t.me/DzVibesShop",
   TELEGRAM_USERNAME: "DzVibesShop",
-  DISCORD_INVITE:    "https://discord.gg/DEZUUhJKma"
+  DISCORD_INVITE:    "https://discord.gg/cPSgv6F8X9"
 };
 
 /* ── Discord Webhook URL ─────────────────────────────────────────────────── */
@@ -927,7 +927,7 @@ function applyStoreSettingsToStorefront(settings) {
   document.querySelectorAll('a[href*="t.me/DzVibesShop"]').forEach(a => {
     a.href = CONFIG.TELEGRAM_URL;
   });
-  document.querySelectorAll('a[href*="discord.gg/DEZUUhJKma"]').forEach(a => {
+  document.querySelectorAll('a[href*="discord.gg/cPSgv6F8X9"]').forEach(a => {
     a.href = CONFIG.DISCORD_INVITE;
   });
 
